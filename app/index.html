@@ -6,7 +6,7 @@
     <title>OwnerRadar — Joe's Pizza Command Center</title>
     <meta
       name="description"
-      content="OwnerRadar command center for Joe's Pizza locations, KPIs, and the 300-pizza Wynwood hackathon demo."
+      content="OwnerRadar command center for Joe's Pizza — live locations, KPIs, and owner attention."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,43 +22,109 @@
       <div class="glow glow-a"></div>
     </div>
 
-    <header class="app-top">
-      <div class="brand-lockup">
-        <a class="back" href="../">OwnerRadar</a>
+    <div class="sr-live" data-sr-live aria-live="polite" aria-atomic="true"></div>
+
+    <header class="command-header" data-command-header>
+      <div class="command-brand">
+        <a class="brand-mark" href="../">OwnerRadar</a>
         <span class="divider" aria-hidden="true">/</span>
-        <h1>Joe's Pizza</h1>
+        <div class="business-selector" title="Business">
+          <span class="business-name">Joe's Pizza</span>
+          <span class="business-meta">10 locations</span>
+        </div>
       </div>
-      <div class="app-top-meta">
-        <p data-as-of></p>
-        <p class="open-badge">Live webhook path · call in · no scripted demo</p>
+
+      <div class="command-status" data-network-status>
+        <span class="live-dot" aria-hidden="true"></span>
+        <span data-status-label>Connecting…</span>
+      </div>
+
+      <p class="command-time" data-as-of>Connecting to Neon…</p>
+
+      <label class="command-search">
+        <span class="sr-only">Command search</span>
+        <input
+          type="search"
+          data-command-input
+          placeholder="Ask: locations with abnormal discounts…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </label>
+
+      <div class="command-actions">
+        <details class="user-menu">
+          <summary class="user-menu-trigger" aria-label="User menu">Owner</summary>
+          <div class="user-menu-panel">
+            <p>Signed in as owner</p>
+            <a href="../">Back to OwnerRadar</a>
+          </div>
+        </details>
       </div>
     </header>
 
     <main class="app-shell">
-      <section class="demo-rail" data-demo aria-label="Live demo path"></section>
+      <section
+        class="network-banner"
+        data-network-banner
+        aria-label="Network health"
+      ></section>
 
-      <section class="group-strip" data-group-strip aria-label="Group KPIs"></section>
+      <section
+        class="executive-kpis"
+        data-executive-kpis
+        aria-label="Executive KPIs"
+      ></section>
 
-      <section class="orders-panel" data-orders-panel aria-label="Orders and cases"></section>
+      <div class="tile-toolbar" data-tile-toolbar>
+        <span class="tile-toolbar-label">Operations</span>
+        <div class="tile-toolbar-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-collapse-all>
+            Collapse all
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" data-expand-pinned>
+            Expand pinned
+          </button>
+        </div>
+      </div>
 
-      <div class="workspace">
-        <section class="stores-panel" aria-labelledby="stores-heading">
-          <div class="panel-head">
-            <h2 id="stores-heading">Locations</h2>
-            <p>
-              Live Neon Postgres · Joe's network ·
-              <a href="https://www.joespizzanyc.com/locations" target="_blank" rel="noopener"
-                >joespizzanyc.com/locations</a
-              >
-            </p>
-          </div>
-          <div class="store-grid" data-store-grid></div>
-          <div class="store-detail" data-store-detail></div>
-        </section>
-
-        <aside class="attention-panel" data-attention aria-label="Owner attention"></aside>
+      <div class="tile-stack" data-tile-stack>
+        <div data-tile-attention></div>
+        <div data-tile-orders></div>
+        <div data-tile-locations></div>
+        <div data-tile-inventory></div>
+        <div data-tile-labor></div>
+        <div data-tile-phone></div>
+        <div data-tile-discounts></div>
+        <div data-tile-delivery></div>
+        <div data-tile-utilities></div>
       </div>
     </main>
+
+    <div
+      class="drawer-root"
+      data-drawer-root
+      hidden
+      aria-hidden="true"
+    >
+      <div class="drawer-backdrop" data-drawer-backdrop tabindex="-1"></div>
+      <aside
+        class="detail-drawer"
+        data-drawer-panel
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="drawer-title"
+        tabindex="-1"
+      >
+        <div class="drawer-chrome">
+          <h2 id="drawer-title" data-drawer-title>Details</h2>
+          <button type="button" class="btn btn-ghost btn-icon" data-drawer-close aria-label="Close detail panel">
+            Close
+          </button>
+        </div>
+        <div class="drawer-body" data-drawer-body></div>
+      </aside>
+    </div>
 
     <script type="module" src="js/app.js"></script>
   </body>
