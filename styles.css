@@ -146,15 +146,21 @@ footer {
 }
 
 .brand {
+  display: flex;
+  flex-direction: column;
   margin: 0;
-  max-width: 12ch;
+  max-width: 100%;
   font-family: Syne, "Instrument Sans", sans-serif;
-  font-size: clamp(3.75rem, 12vw, 8.5rem);
+  font-size: clamp(3.5rem, 14vw, 7.5rem);
   font-weight: 800;
-  line-height: 0.9;
+  line-height: 0.88;
   letter-spacing: -0.045em;
   color: var(--foam);
   animation: rise 1s var(--ease) 0.16s both;
+}
+
+.brand span {
+  display: block;
 }
 
 .lede {
@@ -368,10 +374,6 @@ footer {
   .hero {
     min-height: calc(100svh - 5.5rem);
     padding-top: 3rem;
-  }
-
-  .brand {
-    max-width: none;
   }
 
   .cta-row {
