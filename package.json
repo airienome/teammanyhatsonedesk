@@ -1,0 +1,16 @@
+{
+  "name": "ownerradar-joes",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:seed": "node scripts/seed.mjs",
+    "db:simulate": "node scripts/simulate.mjs",
+    "db:reset": "node scripts/migrate.mjs && node scripts/seed.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "dotenv": "^16.6.1",
+    "ws": "^8.18.3"
+  }
+}

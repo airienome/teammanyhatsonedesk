@@ -2,19 +2,7 @@ import {
   CASHIER_AGENT_PROMPT,
   DEMO_ORDER,
   EVENT_ORGANIZER,
-  applyMiamiOrder,
-  cloneStores,
-  STORES,
 } from "../data/stores.js";
-
-export const DEMO_STAGES = [
-  "idle",
-  "call",
-  "entered",
-  "owner_call",
-  "enrich",
-  "found",
-];
 
 const CALL_LINES = [
   { who: "You", text: "Hey — I need 300 pizzas." },
@@ -42,7 +30,13 @@ const OWNER_LINES = [
   },
 ];
 
-export function createDemoController({ getStores, setStores, onStage, render }) {
+export function createDemoController({
+  getStores,
+  setStores,
+  onStage,
+  render,
+  fireDemoOrder,
+}) {
   let stage = "idle";
   let callIndex = 0;
   let timer = null;
@@ -75,14 +69,17 @@ export function createDemoController({ getStores, setStores, onStage, render }) 
 
   function playCall() {
     clearTimer();
-    setStores(cloneStores(STORES));
     callIndex = 0;
     setStage("call");
 
     const step = () => {
       if (callIndex >= CALL_LINES.length - 1) {
-        timer = setTimeout(() => {
-          setStores(applyMiamiOrder(getStores()));
+        timer = setTimeout(async () => {
+          try {
+            if (fireDemoOrder) await fireDemoOrder();
+          } catch (err) {
+            console.error(err);
+          }
           setStage("entered");
           timer = setTimeout(() => setStage("owner_call"), 1200);
         }, 700);
@@ -106,7 +103,6 @@ export function createDemoController({ getStores, setStores, onStage, render }) 
   function reset() {
     clearTimer();
     callIndex = 0;
-    setStores(cloneStores(STORES));
     setStage("idle");
   }
 

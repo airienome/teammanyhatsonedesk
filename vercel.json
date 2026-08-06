@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/tick",
+      "schedule": "* * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/prd.pdf",
