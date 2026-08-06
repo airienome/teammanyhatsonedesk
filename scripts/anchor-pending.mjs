@@ -21,7 +21,7 @@ if (!solanaConfigured()) {
   process.exit(doBackfill ? 0 : 1);
 }
 
-const kp = loadKeypair();
+const kp = await loadKeypair();
 const connection = new Connection(getRpcUrl(), "confirmed");
 const bal = await connection.getBalance(kp.publicKey);
 console.log(
