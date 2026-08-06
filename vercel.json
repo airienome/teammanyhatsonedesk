@@ -1,0 +1,17 @@
+{
+  "headers": [
+    {
+      "source": "/OwnerRadar_PRD_Hackathon_MVP_v0.1.pdf",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/pdf"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "inline; filename=\"OwnerRadar_PRD_Hackathon_MVP_v0.1.pdf\""
+        }
+      ]
+    }
+  ]
+}
