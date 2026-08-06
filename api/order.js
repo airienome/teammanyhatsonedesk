@@ -38,13 +38,15 @@ export default async function handler(req, res) {
     const when = String(body.when ?? body.needed_by ?? "ASAP");
     const where = String(body.where ?? body.delivery_location ?? "the dock, Wynwood");
     const item = String(body.item ?? body.pizza_type ?? "cheese pies");
-    const storeId = String(body.storeId ?? body.store_id ?? "miami-wynwood");
+    // Always Wynwood — Beach is enlisted automatically when capacity is exceeded
+    const storeId = "miami-wynwood";
 
     const result = await insertCateringOrder({
       storeId,
       qty,
       when,
       where,
+      item,
       channel: "phone",
       caseId: qty >= 75 ? "ORDER-300-HACKATHON" : `ORDER-${qty}-${Date.now()}`,
       callerLabel: body.callerLabel || "elevenlabs_mia",
@@ -54,11 +56,16 @@ export default async function handler(req, res) {
     const snapshot = await fetchNetworkSnapshot();
     res.status(200).json({
       ok: true,
-      message: `Order entered: ${qty} ${item} ${when} to ${where}.`,
+      message: result.fulfillment?.needsHelp
+        ? `Order entered at Miami Wynwood: ${qty} ${item} ${when} to ${where}. Miami Beach helping with ${result.fulfillment.helpShare} pies.`
+        : `Order entered at Miami Wynwood: ${qty} ${item} ${when} to ${where}.`,
       caseId: result.caseId,
       isMaterial: result.isMaterial,
-      storeId,
+      storeId: result.storeId,
+      helpStoreId: result.helpStoreId,
+      fulfillment: result.fulfillment,
       qty,
+      item,
       when,
       where,
       kpi: {

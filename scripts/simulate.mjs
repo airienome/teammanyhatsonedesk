@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
+import { latestBalance, recomputeStoreKpi } from "../lib/kpi.mjs";
 
 const sql = neon(process.env.DATABASE_URL);
 
@@ -13,30 +14,6 @@ function pick(arr) {
 
 function chance(p) {
   return Math.random() < p;
-}
-
-async function latestBalance(storeId, sku) {
-  const rows = await sql`
-    SELECT balance FROM inventory_ledger
-    WHERE store_id = ${storeId} AND sku = ${sku}
-    ORDER BY occurred_at DESC
-    LIMIT 1
-  `;
-  return rows[0] ? Number(rows[0].balance) : 0;
-}
-
-async function onClockCount(storeId) {
-  const rows = await sql`
-    WITH latest AS (
-      SELECT DISTINCT ON (employee_id)
-        employee_id, event_type
-      FROM clock_events
-      WHERE store_id = ${storeId}
-      ORDER BY employee_id, occurred_at DESC
-    )
-    SELECT COUNT(*)::int AS count FROM latest WHERE event_type = 'clock_in'
-  `;
-  return rows[0]?.count ?? 0;
 }
 
 async function tickStore(store) {
@@ -80,7 +57,7 @@ async function tickStore(store) {
     events.push(`call ${outcome}`);
   }
 
-  // POS orders + dough/water drawdown
+  // POS orders + dough/water drawdown (routine 1–4 pies — stays in compliance)
   if (chance(0.7)) {
     const pizzas = Math.max(1, Math.floor(rand(1, 5)));
     const ticket = Math.floor(pizzas * rand(1500, 2400));
@@ -108,7 +85,7 @@ async function tickStore(store) {
       ["boxes", -pizzas],
       ["sauce", -Number((pizzas * 0.12).toFixed(2))],
     ]) {
-      const bal = await latestBalance(store.id, sku);
+      const bal = await latestBalance(sql, store.id, sku);
       const next = Number((bal + delta).toFixed(3));
       await sql`
         INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason)
@@ -133,7 +110,7 @@ async function tickStore(store) {
   // Occasional dough remake / water refill / delivery restock
   if (chance(0.12)) {
     const add = Number(rand(8, 25).toFixed(2));
-    const bal = await latestBalance(store.id, "dough");
+    const bal = await latestBalance(sql, store.id, "dough");
     await sql`
       INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason)
       VALUES (${store.id}, 'dough', ${add}, ${Number((bal + add).toFixed(3))}, 'dough_batch')
@@ -142,7 +119,7 @@ async function tickStore(store) {
   }
   if (chance(0.1)) {
     const add = Number(rand(5, 15).toFixed(2));
-    const bal = await latestBalance(store.id, "water");
+    const bal = await latestBalance(sql, store.id, "water");
     await sql`
       INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason)
       VALUES (${store.id}, 'water', ${add}, ${Number((bal + add).toFixed(3))}, 'water_refill')
@@ -168,10 +145,10 @@ async function tickStore(store) {
       LIMIT 1
     `;
     const last = latest[0]?.event_type;
-    const started = new Date(shift.starts_at) <= now;
+    const startedShift = new Date(shift.starts_at) <= now;
     const ended = new Date(shift.ends_at) <= now;
 
-    if (started && !ended && last !== "clock_in" && chance(0.35)) {
+    if (startedShift && !ended && last !== "clock_in" && chance(0.35)) {
       await sql`
         INSERT INTO clock_events (store_id, employee_id, event_type)
         VALUES (${store.id}, ${shift.employee_id}, 'clock_in')
@@ -187,74 +164,9 @@ async function tickStore(store) {
     }
   }
 
-  // Roll KPI snapshot from today's activity
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const isoDay = startOfDay.toISOString();
-
-  const orderAgg = await sql`
-    SELECT
-      COALESCE(SUM(ticket_cents), 0)::int AS revenue_cents,
-      COUNT(*)::int AS orders,
-      COALESCE(AVG(ticket_cents), 0)::int AS avg_ticket_cents,
-      COALESCE(SUM(pizza_count), 0)::int AS pizzas,
-      COALESCE(SUM(CASE WHEN status = 'refunded' THEN 1 ELSE 0 END), 0)::int AS refunds
-    FROM pos_orders
-    WHERE store_id = ${store.id} AND occurred_at >= ${isoDay}
-  `;
-  const callAgg = await sql`
-    SELECT COUNT(*)::int AS calls FROM phone_calls
-    WHERE store_id = ${store.id} AND occurred_at >= ${isoDay}
-  `;
-  const webAgg = await sql`
-    SELECT COALESCE(SUM(sessions), 0)::int AS sessions FROM website_hits
-    WHERE store_id = ${store.id} AND occurred_at >= ${isoDay}
-  `;
-  const utilAgg = await sql`
-    SELECT
-      COALESCE(SUM(water_gallons), 0)::float AS water,
-      COALESCE(SUM(dough_lbs_produced), 0)::float AS dough
-    FROM utility_readings
-    WHERE store_id = ${store.id} AND occurred_at >= ${isoDay}
-  `;
-
-  const o = orderAgg[0];
-  const onClock = await onClockCount(store.id);
-  const doughBal = await latestBalance(store.id, "dough");
-  const capacityUtil = Math.min(
-    99,
-    Number(((Number(o.pizzas) / Math.max(store.capacity_pizzas, 1)) * 100).toFixed(1))
-  );
-  const refundRate = o.orders
-    ? Number(((o.refunds / o.orders) * 100).toFixed(2))
-    : 0;
-  const staffingFill = Number(((onClock / 5) * 100).toFixed(1));
-  const inventoryDays = Number((doughBal / Math.max(Number(utilAgg[0].dough) / 8, 8)).toFixed(2));
-
-  await sql`
-    INSERT INTO kpi_snapshots (
-      store_id, revenue_cents, orders, avg_ticket_cents, capacity_util,
-      refund_rate, discount_rate, delivery_eta_min, staffing_fill, inventory_days,
-      water_gallons_today, dough_lbs_today, phone_calls_today, web_sessions_today,
-      employees_on_clock
-    ) VALUES (
-      ${store.id},
-      ${o.revenue_cents},
-      ${o.orders},
-      ${o.avg_ticket_cents},
-      ${capacityUtil},
-      ${refundRate},
-      ${Number(rand(1.2, 2.8).toFixed(2))},
-      ${Number(rand(18, 36).toFixed(1))},
-      ${Math.min(100, staffingFill)},
-      ${Math.max(0.3, inventoryDays)},
-      ${Number(utilAgg[0].water)},
-      ${Number(utilAgg[0].dough)},
-      ${callAgg[0].calls},
-      ${webAgg[0].sessions},
-      ${onClock}
-    )
-  `;
+  // Same KPI rollup used when a live phone order inserts
+  const kpi = await recomputeStoreKpi(sql, store);
+  const onClock = kpi.snapshot.employees_on_clock;
 
   await sql`
     INSERT INTO store_events (store_id, event_type, severity, title, body, payload)
@@ -264,7 +176,7 @@ async function tickStore(store) {
       'info',
       ${`${store.name} pulse`},
       ${events.join(" · ") || "quiet tick"},
-      ${JSON.stringify({ events, onClock })}
+      ${JSON.stringify({ events, onClock, capacityUtil: kpi.capacityUtil })}
     )
   `;
 
