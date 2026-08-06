@@ -21,6 +21,7 @@ export function createDemoController({ onStage, render }) {
   let stage = "listening";
   let timer = null;
   let liveCase = null;
+  let listenSince = Date.now();
 
   function clearTimer() {
     if (timer) {
@@ -76,6 +77,11 @@ export function createDemoController({ onStage, render }) {
   function markEntered(activeCase = null) {
     if (activeCase) liveCase = activeCase;
     if (stage !== "listening") return;
+    const eventAt = activeCase?.eventAt
+      ? new Date(activeCase.eventAt).getTime()
+      : Date.now();
+    // Ignore cases that already existed before we started / reset listening
+    if (eventAt < listenSince - 5_000) return;
     clearTimer();
     setStage("alert");
     timer = setTimeout(() => setStage("owner_call"), 1400);
@@ -91,6 +97,7 @@ export function createDemoController({ onStage, render }) {
   function reset() {
     clearTimer();
     liveCase = null;
+    listenSince = Date.now();
     setStage("listening");
   }
 

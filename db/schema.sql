@@ -2,6 +2,7 @@
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+DROP TABLE IF EXISTS chain_receipts CASCADE;
 DROP TABLE IF EXISTS website_hits CASCADE;
 DROP TABLE IF EXISTS phone_calls CASCADE;
 DROP TABLE IF EXISTS utility_readings CASCADE;
@@ -149,6 +150,23 @@ CREATE TABLE store_events (
   occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- SHA-256 order digest anchored on Solana via Memo program
+CREATE TABLE chain_receipts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL UNIQUE REFERENCES pos_orders(id) ON DELETE CASCADE,
+  payload_hash TEXT NOT NULL,
+  payload_json JSONB NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'anchored', 'failed')),
+  signature TEXT,
+  slot BIGINT,
+  explorer_url TEXT,
+  cluster TEXT NOT NULL DEFAULT 'devnet',
+  error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  anchored_at TIMESTAMPTZ
+);
+
 CREATE INDEX idx_clock_store_time ON clock_events (store_id, occurred_at DESC);
 CREATE INDEX idx_inventory_store_time ON inventory_ledger (store_id, occurred_at DESC);
 CREATE INDEX idx_utility_store_time ON utility_readings (store_id, occurred_at DESC);
@@ -158,3 +176,5 @@ CREATE INDEX idx_orders_store_time ON pos_orders (store_id, occurred_at DESC);
 CREATE INDEX idx_kpi_store_time ON kpi_snapshots (store_id, occurred_at DESC);
 CREATE INDEX idx_events_store_time ON store_events (store_id, occurred_at DESC);
 CREATE INDEX idx_shifts_store_time ON shifts (store_id, starts_at);
+CREATE INDEX idx_chain_status_created ON chain_receipts (status, created_at ASC);
+CREATE INDEX idx_chain_order ON chain_receipts (order_id);

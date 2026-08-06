@@ -15,9 +15,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const summary = await simulateTick();
+    const result = await simulateTick();
+    const summary = result?.stores || result;
+    const chain = result?.chain || null;
     const snapshot = await fetchNetworkSnapshot();
-    res.status(200).json({ ok: true, summary, snapshot });
+    res.status(200).json({ ok: true, summary, chain, snapshot });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "Tick failed" });

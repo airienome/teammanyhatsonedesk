@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
 import { latestBalance, recomputeStoreKpi } from "../lib/kpi.mjs";
+import { demandMultiplier } from "../lib/sim-time.mjs";
+import { flushPendingAnchors, queueOrderAnchor } from "../lib/chain.mjs";
 
 const sql = neon(process.env.DATABASE_URL);
 
@@ -16,195 +18,247 @@ function chance(p) {
   return Math.random() < p;
 }
 
-async function tickStore(store) {
-  const now = new Date();
+async function ensureStock(storeId, sku, minLevel, restockTo) {
+  const bal = await latestBalance(sql, storeId, sku);
+  if (bal >= minLevel) return bal;
+  const add = Number((restockTo - bal).toFixed(2));
+  const next = Number((bal + add).toFixed(3));
+  await sql`
+    INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason, occurred_at)
+    VALUES (${storeId}, ${sku}, ${add}, ${next}, 'auto_restock', NOW())
+  `;
+  return next;
+}
+
+/**
+ * One realistic pulse for a store at time `at` (defaults to now).
+ * Scaled by dinner-rush demand curve — not a firehose every few seconds.
+ */
+export async function tickStore(store, at = new Date()) {
+  const demand = demandMultiplier(at);
+  const atIso = at.toISOString();
   const events = [];
 
-  // Website traffic pulse
-  const sessions = Math.floor(rand(1, 8));
-  const pageviews = sessions + Math.floor(rand(2, 18));
-  const started = Math.floor(rand(0, 3));
-  const completed = Math.min(started, Math.floor(rand(0, 3)));
-  await sql`
-    INSERT INTO website_hits (
-      store_id, sessions, pageviews, orders_started, orders_completed
-    ) VALUES (
-      ${store.id}, ${sessions}, ${pageviews}, ${started}, ${completed}
-    )
-  `;
-  events.push(`web +${sessions} sess`);
+  // Light web traffic every tick
+  if (chance(0.55 + demand * 0.35)) {
+    const sessions = Math.max(1, Math.floor(rand(1, 2 + demand * 5)));
+    await sql`
+      INSERT INTO website_hits (
+        store_id, sessions, pageviews, orders_started, orders_completed, occurred_at
+      ) VALUES (
+        ${store.id},
+        ${sessions},
+        ${sessions + Math.floor(rand(1, 8))},
+        ${chance(0.35 * demand) ? 1 : 0},
+        ${chance(0.22 * demand) ? 1 : 0},
+        ${atIso}
+      )
+    `;
+    events.push(`web +${sessions}`);
+  }
 
-  // Phone calls
-  if (chance(0.55)) {
+  // Phone — denser at peak, sparse otherwise
+  if (chance(0.12 + demand * 0.28)) {
     const outcome = pick([
       "order_taken",
       "menu_question",
-      "catering_inquiry",
+      "menu_question",
       "hangup",
+      "catering_inquiry",
       "reservation",
     ]);
     await sql`
       INSERT INTO phone_calls (
-        store_id, direction, duration_sec, outcome, caller_label
+        store_id, direction, duration_sec, outcome, caller_label, occurred_at
       ) VALUES (
         ${store.id},
-        ${chance(0.85) ? "inbound" : "outbound"},
-        ${Math.floor(rand(20, 240))},
+        'inbound',
+        ${Math.floor(rand(25, 160))},
         ${outcome},
-        ${pick(["local", "tourist", "delivery_app", "corporate", "unknown"])}
+        ${pick(["local", "tourist", "delivery_app", "unknown"])},
+        ${atIso}
       )
     `;
     events.push(`call ${outcome}`);
   }
 
-  // POS orders + dough/water drawdown (routine 1–4 pies — stays in compliance)
-  if (chance(0.7)) {
-    const pizzas = Math.max(1, Math.floor(rand(1, 5)));
-    const ticket = Math.floor(pizzas * rand(1500, 2400));
-    await sql`
+  // Routine POS: 1–3 pies, never catering-scale
+  if (chance(0.18 + demand * 0.45)) {
+    const pizzas = chance(0.15 * demand) ? 3 : chance(0.4) ? 2 : 1;
+    const ticket = Math.floor(pizzas * rand(1450, 2100));
+    const refunded = chance(0.015); // ~1.5% refunds — realistic
+
+    const orderRows = await sql`
       INSERT INTO pos_orders (
-        store_id, channel, items_json, pizza_count, ticket_cents, status
+        store_id, channel, items_json, pizza_count, ticket_cents, status, occurred_at
       ) VALUES (
         ${store.id},
-        ${pick(["pos", "web", "phone", "uber_eats", "door_dash"])},
-        ${JSON.stringify([{ item: "mixed_pies", qty: pizzas }])},
+        ${pick(["pos", "pos", "web", "phone", "uber_eats", "door_dash"])},
+        ${JSON.stringify([{ item: "slice_or_pie", qty: pizzas }])},
         ${pizzas},
         ${ticket},
-        'paid'
+        ${refunded ? "refunded" : "paid"},
+        ${atIso}
       )
+      RETURNING *
     `;
+    try {
+      await queueOrderAnchor(orderRows[0]);
+    } catch (err) {
+      console.warn("[chain] queue failed:", err?.message || err);
+    }
 
-    const doughUse = Number((pizzas * rand(0.9, 1.2)).toFixed(2));
-    const waterUse = Number((pizzas * rand(0.15, 0.35)).toFixed(2));
-    const cheeseUse = Number((pizzas * rand(0.4, 0.7)).toFixed(2));
+    for (const [sku, min, par] of [
+      ["dough", 20, 90],
+      ["water", 8, 45],
+      ["cheese", 12, 55],
+      ["sauce", 4, 20],
+      ["boxes", 40, 400],
+    ]) {
+      await ensureStock(store.id, sku, min, par);
+    }
+
+    const doughUse = Number((pizzas * rand(0.85, 1.1)).toFixed(2));
+    const waterUse = Number((pizzas * rand(0.12, 0.28)).toFixed(2));
 
     for (const [sku, delta] of [
       ["dough", -doughUse],
       ["water", -waterUse],
-      ["cheese", -cheeseUse],
+      ["cheese", -Number((pizzas * rand(0.35, 0.55)).toFixed(2))],
       ["boxes", -pizzas],
-      ["sauce", -Number((pizzas * 0.12).toFixed(2))],
+      ["sauce", -Number((pizzas * 0.1).toFixed(2))],
     ]) {
       const bal = await latestBalance(sql, store.id, sku);
-      const next = Number((bal + delta).toFixed(3));
+      const next = Number(Math.max(0, bal + delta).toFixed(3));
       await sql`
-        INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason)
-        VALUES (${store.id}, ${sku}, ${delta}, ${next}, 'production_use')
+        INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason, occurred_at)
+        VALUES (${store.id}, ${sku}, ${delta}, ${next}, 'production_use', ${atIso})
       `;
     }
 
     await sql`
       INSERT INTO utility_readings (
-        store_id, water_gallons, gas_therms, electric_kwh, dough_lbs_produced
+        store_id, water_gallons, gas_therms, electric_kwh, dough_lbs_produced, occurred_at
       ) VALUES (
         ${store.id},
         ${waterUse},
-        ${Number(rand(0.1, 0.6).toFixed(2))},
-        ${Number(rand(0.8, 2.5).toFixed(2))},
-        ${doughUse}
+        ${Number(rand(0.08, 0.35).toFixed(2))},
+        ${Number(rand(0.5, 1.8).toFixed(2))},
+        ${doughUse},
+        ${atIso}
       )
     `;
-    events.push(`pos ${pizzas} pies`);
+    events.push(`pos ${pizzas} pie${pizzas > 1 ? "s" : ""}`);
   }
 
-  // Occasional dough remake / water refill / delivery restock
-  if (chance(0.12)) {
-    const add = Number(rand(8, 25).toFixed(2));
+  // Occasional dough batch during service
+  if (chance(0.04 + demand * 0.04)) {
+    const add = Number(rand(10, 22).toFixed(2));
     const bal = await latestBalance(sql, store.id, "dough");
     await sql`
-      INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason)
-      VALUES (${store.id}, 'dough', ${add}, ${Number((bal + add).toFixed(3))}, 'dough_batch')
+      INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason, occurred_at)
+      VALUES (${store.id}, 'dough', ${add}, ${Number((bal + add).toFixed(3))}, 'dough_batch', ${atIso})
     `;
     events.push("dough batch");
   }
-  if (chance(0.1)) {
-    const add = Number(rand(5, 15).toFixed(2));
-    const bal = await latestBalance(sql, store.id, "water");
-    await sql`
-      INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason)
-      VALUES (${store.id}, 'water', ${add}, ${Number((bal + add).toFixed(3))}, 'water_refill')
-    `;
-    events.push("water refill");
-  }
 
-  // Clock in/out based on schedule windows
+  // Soft clock alignment with shifts
   const due = await sql`
-    SELECT s.employee_id, s.role, s.starts_at, s.ends_at, e.display_name
+    SELECT s.employee_id, s.starts_at, s.ends_at, e.display_name
     FROM shifts s
     JOIN employees e ON e.id = s.employee_id
     WHERE s.store_id = ${store.id}
-      AND s.starts_at <= ${now.toISOString()}
-      AND s.ends_at >= ${new Date(now.getTime() - 15 * 60_000).toISOString()}
+      AND s.starts_at <= ${atIso}
+      AND s.ends_at >= ${new Date(at.getTime() - 20 * 60_000).toISOString()}
   `;
-
   for (const shift of due) {
     const latest = await sql`
       SELECT event_type FROM clock_events
       WHERE employee_id = ${shift.employee_id}
-      ORDER BY occurred_at DESC
-      LIMIT 1
+      ORDER BY occurred_at DESC LIMIT 1
     `;
     const last = latest[0]?.event_type;
-    const startedShift = new Date(shift.starts_at) <= now;
-    const ended = new Date(shift.ends_at) <= now;
-
-    if (startedShift && !ended && last !== "clock_in" && chance(0.35)) {
+    const started = new Date(shift.starts_at) <= at;
+    const ended = new Date(shift.ends_at) <= at;
+    if (started && !ended && last !== "clock_in" && chance(0.25)) {
       await sql`
-        INSERT INTO clock_events (store_id, employee_id, event_type)
-        VALUES (${store.id}, ${shift.employee_id}, 'clock_in')
+        INSERT INTO clock_events (store_id, employee_id, event_type, occurred_at)
+        VALUES (${store.id}, ${shift.employee_id}, 'clock_in', ${atIso})
       `;
-      events.push(`in ${shift.display_name}`);
+      events.push(`in ${shift.display_name.split(" ")[0]}`);
     }
-    if (ended && last === "clock_in" && chance(0.5)) {
+    if (ended && last === "clock_in" && chance(0.4)) {
       await sql`
-        INSERT INTO clock_events (store_id, employee_id, event_type)
-        VALUES (${store.id}, ${shift.employee_id}, 'clock_out')
+        INSERT INTO clock_events (store_id, employee_id, event_type, occurred_at)
+        VALUES (${store.id}, ${shift.employee_id}, 'clock_out', ${atIso})
       `;
-      events.push(`out ${shift.display_name}`);
+      events.push(`out ${shift.display_name.split(" ")[0]}`);
     }
   }
 
-  // Same KPI rollup used when a live phone order inserts
-  const kpi = await recomputeStoreKpi(sql, store);
-  const onClock = kpi.snapshot.employees_on_clock;
+  await recomputeStoreKpi(sql, store, { at });
 
-  await sql`
-    INSERT INTO store_events (store_id, event_type, severity, title, body, payload)
-    VALUES (
-      ${store.id},
-      'sim_tick',
-      'info',
-      ${`${store.name} pulse`},
-      ${events.join(" · ") || "quiet tick"},
-      ${JSON.stringify({ events, onClock, capacityUtil: kpi.capacityUtil })}
-    )
-  `;
+  if (events.length) {
+    await sql`
+      INSERT INTO store_events (store_id, event_type, severity, title, body, payload, occurred_at)
+      VALUES (
+        ${store.id},
+        'sim_tick',
+        'info',
+        ${`${store.name} pulse`},
+        ${events.join(" · ")},
+        ${JSON.stringify({ events, demand })},
+        ${atIso}
+      )
+    `;
+  }
 
   return events;
 }
 
-export async function simulateTick() {
+export async function simulateTick(at = new Date()) {
   const stores = await sql`SELECT * FROM stores ORDER BY name`;
   const summary = [];
   for (const store of stores) {
-    const events = await tickStore(store);
+    const events = await tickStore(store, at);
     summary.push({ store: store.id, events });
   }
-  return summary;
+  await sql`
+    UPDATE sim_state SET last_tick_at = ${at.toISOString()} WHERE id = 1
+  `.catch(() => null);
+
+  // Push queued order hashes onto Solana (memo txs) after the ops pulse
+  let chain = { attempted: 0, anchored: 0, failed: 0, skipped: 0 };
+  try {
+    chain = await flushPendingAnchors({ limit: 25 });
+  } catch (err) {
+    console.warn("[chain] flush failed:", err?.message || err);
+    chain = { ...chain, error: err?.message || String(err) };
+  }
+
+  return { stores: summary, chain };
 }
 
 const isMain = process.argv[1] && process.argv[1].endsWith("simulate.mjs");
 
 if (isMain) {
-  const intervalMs = Number(process.env.SIM_INTERVAL_MS || 4000);
-  console.log(`Simulating Joe's Pizza ops every ${intervalMs}ms…`);
+  const intervalMs = Number(process.env.SIM_INTERVAL_MS || 20000);
+  console.log(`Realistic Joe's sim every ${intervalMs}ms…`);
   const run = async () => {
     try {
-      const summary = await simulateTick();
-      const stamp = new Date().toLocaleTimeString();
+      const { stores: summary, chain } = await simulateTick();
+      const stamp = new Date().toLocaleTimeString("en-US", {
+        timeZone: "America/New_York",
+      });
       console.log(
         `[${stamp}]`,
-        summary.map((s) => `${s.store}:{${s.events.join(",")}}`).join(" | ")
+        summary
+          .filter((s) => s.events.length)
+          .map((s) => `${s.store}:{${s.events.join(",")}}`)
+          .join(" | ") || "quiet",
+        chain?.anchored || chain?.skipped || chain?.failed
+          ? `| chain a=${chain.anchored || 0} f=${chain.failed || 0} s=${chain.skipped || 0}`
+          : ""
       );
     } catch (err) {
       console.error(err);

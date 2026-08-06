@@ -26,6 +26,7 @@ const state = {
     rows: [],
   },
   asOf: null,
+  sim: null,
   live: false,
   error: null,
   lastOrderKpi: null,
@@ -48,6 +49,7 @@ function apiUrl(path) {
 function applySnapshot(snapshot, meta = {}) {
   state.stores = (snapshot.stores || []).map((s) => ({ ...s }));
   state.asOf = snapshot.asOf;
+  state.sim = snapshot.sim || null;
   state.analysis = analyzeStores(state.stores);
   state.live = true;
   state.error = null;
@@ -163,19 +165,6 @@ function itemDisplay(order) {
   const raw = order.itemLabel || "Order";
   if (raw === "mixed_pies") return "mixed pies";
   return raw;
-}
-
-async function fireDemoOrder() {
-  /* Live path uses voice webhook only — kept for optional local testing. */
-  const res = await fetch(apiUrl("/api/demo-order"), { method: "POST" });
-  if (!res.ok) throw new Error("demo-order failed");
-  const data = await res.json();
-  applySnapshot(data.snapshot, { kpi: data.kpi });
-  state.selectedId = "miami-wynwood";
-  state.selectedOrderId = null;
-  state.orderFilter = "material";
-  await loadOrders();
-  maybeEscalateFromLiveOrder();
 }
 
 const demo = createDemoController({
@@ -676,47 +665,76 @@ function renderDemo() {
   const stage = demo.stage;
   const lines = demo.transcript();
   const ownerLines = demo.ownerTranscript();
+  const live = demo.liveCase;
+  const miami = state.stores.find((s) => s.id === "miami-wynwood");
+  const miamiAnalysis = state.analysis?.storeAnalyses.find(
+    (a) => a.store.id === "miami-wynwood"
+  );
+  const isAlert =
+    stage === "alert" ||
+    stage === "owner_call" ||
+    stage === "enrich" ||
+    stage === "found" ||
+    (miami?.activeCase && miamiAnalysis?.status === "alert");
 
   const stageNote = {
-    idle: "Live Neon DB is writing Joe's ops now. Run the 300-pie path when ready.",
-    call: "Cashier intake (also Retell-ready).",
-    entered: "Order in POS — KPIs recomputed; Wynwood is red at ≥2σ.",
-    owner_call: "OwnerRadar is calling the owner (your partner).",
+    listening:
+      "Call Mia at Joe's Miami Wynwood. When she hits the Order tool, the webhook lands here live.",
+    alert: "Material order in POS — Wynwood is red (≥2σ). Dialing your hackathon partner…",
+    owner_call: "OwnerRadar is on the line with the owner (your hackathon partner).",
     enrich: "Looking up who's running the Wynwood dock event…",
-    found: "Found them — LinkedIn + public info texted to the owner.",
+    found: "Found them — LinkedIn + public info texted to your partner.",
   }[stage];
 
   el.demo.innerHTML = `
     <div class="demo-head">
       <div>
-        <h2>Hackathon live path</h2>
+        <h2>Live path</h2>
         <p>${stageNote}</p>
       </div>
       <div class="demo-actions">
-        <button type="button" class="btn btn-primary" data-demo-run ${stage === "call" ? "disabled" : ""}>
-          ${stage === "idle" ? "Run 300-pizza demo" : "Replay demo"}
-        </button>
+        <span class="live-listen-pill ${stage === "listening" ? "is-listening" : ""} ${isAlert ? "is-alert" : ""}">
+          ${
+            stage === "listening"
+              ? "Listening for webhook"
+              : stage === "alert"
+                ? "Alert · Wynwood red"
+                : stage === "owner_call"
+                  ? "Calling owner"
+                  : stage === "enrich"
+                    ? "Enriching…"
+                    : "Case closed loop"
+          }
+        </span>
         <button type="button" class="btn btn-ghost" data-demo-reset>Reset view</button>
       </div>
     </div>
     <div class="demo-grid">
-      <section class="demo-card">
-        <h3>1 · Call Joe's cashier</h3>
-        <ol class="transcript">
-          ${
-            lines.length
-              ? lines
+      <section class="demo-card ${isAlert ? "is-hot" : ""}">
+        <h3>1 · You call Joe's cashier</h3>
+        ${
+          stage === "listening"
+            ? `<ol class="transcript">
+                <li class="muted">Dial Mia · place the big catering order · she runs the Order tool.</li>
+                <li class="muted">Waiting on <code>/api/order</code> or <code>/api/retell-order</code>…</li>
+              </ol>`
+            : `<ol class="transcript">
+                ${lines
                   .map(
                     (l) =>
                       `<li><span class="who">${l.who}</span><span class="said">${l.text}</span></li>`
                   )
-                  .join("")
-              : `<li class="muted">Waiting to dial Mia at Joe's Miami Wynwood…</li>`
-          }
-        </ol>
+                  .join("")}
+                ${
+                  live || miami?.activeCase
+                    ? `<li><span class="who">Status</span><span class="said">${(live || miami.activeCase).qty || DEMO_ORDER.qty} pies accepted · case ${(live || miami.activeCase).caseId || DEMO_ORDER.caseId}</span></li>`
+                    : ""
+                }
+              </ol>`
+        }
       </section>
-      <section class="demo-card">
-        <h3>2 · Owner call</h3>
+      <section class="demo-card ${stage === "owner_call" || stage === "enrich" || stage === "found" ? "is-hot" : ""}">
+        <h3>2 · OwnerRadar → owner (partner)</h3>
         <ol class="transcript">
           ${
             ownerLines.length
@@ -726,12 +744,12 @@ function renderDemo() {
                       `<li><span class="who">${l.who}</span><span class="said">${l.text}</span></li>`
                   )
                   .join("")
-              : `<li class="muted">Owner stays quiet until the order is material.</li>`
+              : `<li class="muted">Quiet until a material webhook order turns Wynwood red.</li>`
           }
         </ol>
         ${
           stage === "owner_call"
-            ? `<button type="button" class="btn btn-primary" data-demo-yes>Owner: Yes — find who's in charge</button>`
+            ? `<button type="button" class="btn btn-primary" data-demo-yes>Partner: Yes — find who's in charge</button>`
             : ""
         }
         ${stage === "enrich" ? `<p class="searching">Searching public event + people graph…</p>` : ""}
@@ -750,14 +768,22 @@ function renderDemo() {
       </section>
     </div>
     <details class="agent-prompt">
-      <summary>Cashier agent prompt (paste into Retell / voice agent)</summary>
-      <pre>${CASHIER_AGENT_PROMPT.replace(/</g, "&lt;")}</pre>
+      <summary>Voice agent prompts (cashier + OwnerRadar)</summary>
+      <div class="agent-prompt-grid">
+        <div>
+          <h4>Mia · cashier (inbound)</h4>
+          <p class="agent-meta">Order tool → <code>/api/order</code> or <code>/api/retell-order</code></p>
+          <pre>${CASHIER_AGENT_PROMPT.replace(/</g, "&lt;")}</pre>
+        </div>
+        <div>
+          <h4>OwnerRadar → partner (outbound)</h4>
+          <p class="agent-meta">Call Owner tool → <code>/api/call-owner</code> · dials OWNER_PHONE</p>
+          <pre>${OWNER_RADAR_AGENT_PROMPT.replace(/</g, "&lt;")}</pre>
+        </div>
+      </div>
     </details>
   `;
 
-  el.demo.querySelector("[data-demo-run]")?.addEventListener("click", () => {
-    demo.playCall();
-  });
   el.demo.querySelector("[data-demo-reset]")?.addEventListener("click", () => {
     state.selectedId = null;
     state.selectedOrderId = null;
@@ -771,8 +797,16 @@ function renderDemo() {
 }
 
 function render() {
+  const simStart = state.sim?.startedAt
+    ? new Date(state.sim.startedAt).toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : "7:00 PM";
   el.asOf.textContent = state.asOf
-    ? `Neon live · ${new Date(state.asOf).toLocaleTimeString()}`
+    ? `Sim from ${simStart} ET · live ${new Date(state.asOf).toLocaleTimeString("en-US", { timeZone: "America/New_York" })}`
     : "Connecting to Neon…";
   if (state.error) {
     el.asOf.textContent = `DB error: ${state.error}`;
@@ -795,7 +829,7 @@ async function boot() {
     await Promise.all([loadFeed(), loadOrders()]);
     maybeEscalateFromLiveOrder();
     render();
-  }, 5000);
+  }, 20000);
 }
 
 boot();
