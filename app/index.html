@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OwnerRadar — Miami Slice Command Center</title>
+    <title>OwnerRadar — Joe's Pizza Command Center</title>
     <meta
       name="description"
-      content="OwnerRadar command center for Miami Slice Group stores, KPIs, and statistical compliance."
+      content="OwnerRadar command center for Joe's Pizza locations, KPIs, and the 300-pizza Wynwood hackathon demo."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -26,22 +26,29 @@
       <div class="brand-lockup">
         <a class="back" href="../">OwnerRadar</a>
         <span class="divider" aria-hidden="true">/</span>
-        <h1>Miami Slice Group</h1>
+        <h1>Joe's Pizza</h1>
       </div>
       <div class="app-top-meta">
         <p data-as-of></p>
-        <p class="open-badge">Open demo · no login</p>
+        <p class="open-badge">Hackathon supplier demo · no login</p>
       </div>
     </header>
 
     <main class="app-shell">
+      <section class="demo-rail" data-demo aria-label="Live demo path"></section>
+
       <section class="group-strip" data-group-strip aria-label="Group KPIs"></section>
 
       <div class="workspace">
         <section class="stores-panel" aria-labelledby="stores-heading">
           <div class="panel-head">
-            <h2 id="stores-heading">Stores</h2>
-            <p>Status from peer and 7-day statistical compliance</p>
+            <h2 id="stores-heading">Locations</h2>
+            <p>
+              Real Joe's network ·
+              <a href="https://www.joespizzanyc.com/locations" target="_blank" rel="noopener"
+                >joespizzanyc.com/locations</a
+              >
+            </p>
           </div>
           <div class="store-grid" data-store-grid></div>
           <div class="store-detail" data-store-detail></div>

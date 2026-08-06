@@ -136,6 +136,228 @@ a:hover {
   padding: 1.25rem 0 2.5rem;
 }
 
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.btn-primary {
+  background: var(--signal);
+  color: var(--ink);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #9bffe0;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: rgba(243, 247, 244, 0.28);
+  color: var(--foam);
+}
+
+.btn-ghost:hover {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+
+.demo-rail {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: rgba(10, 32, 40, 0.72);
+}
+
+.demo-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.85rem;
+  align-items: flex-start;
+  margin-bottom: 0.9rem;
+}
+
+.demo-head h2 {
+  margin: 0;
+  font-family: Syne, sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+}
+
+.demo-head p {
+  margin: 0.3rem 0 0;
+  color: var(--foam-faint);
+  font-size: 0.88rem;
+}
+
+.demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.demo-card {
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: rgba(7, 22, 28, 0.55);
+}
+
+.demo-card h3 {
+  margin: 0 0 0.65rem;
+  font-family: Syne, sans-serif;
+  font-size: 0.95rem;
+}
+
+.transcript {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.transcript li {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.transcript .who {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sand);
+  font-weight: 600;
+}
+
+.transcript .said {
+  color: var(--foam-muted);
+  font-size: 0.9rem;
+}
+
+.transcript .muted {
+  color: var(--foam-faint);
+  font-size: 0.88rem;
+}
+
+.demo-card .btn {
+  margin-top: 0.85rem;
+  width: 100%;
+}
+
+.searching {
+  margin: 0.85rem 0 0;
+  color: var(--signal);
+  font-size: 0.9rem;
+}
+
+.found-card {
+  margin-top: 0.85rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(61, 255, 192, 0.35);
+  border-radius: 0.35rem;
+  background: rgba(18, 70, 78, 0.35);
+}
+
+.found-kicker {
+  margin: 0;
+  color: var(--signal);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.found-card h4 {
+  margin: 0.35rem 0 0.15rem;
+  font-family: Syne, sans-serif;
+  font-size: 1.15rem;
+}
+
+.found-card p {
+  margin: 0.2rem 0;
+  color: var(--foam-muted);
+  font-size: 0.9rem;
+}
+
+.found-card ul {
+  margin: 0.55rem 0;
+  padding-left: 1.1rem;
+  color: var(--foam-muted);
+  font-size: 0.86rem;
+}
+
+.sms-preview {
+  margin-top: 0.65rem !important;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+  color: var(--sand) !important;
+  font-weight: 600;
+}
+
+.agent-prompt {
+  margin-top: 0.85rem;
+  color: var(--foam-faint);
+  font-size: 0.85rem;
+}
+
+.agent-prompt summary {
+  cursor: pointer;
+  color: var(--foam-muted);
+}
+
+.agent-prompt pre {
+  margin: 0.65rem 0 0;
+  padding: 0.85rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--foam-muted);
+  white-space: pre-wrap;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.store-card.is-pulsing {
+  animation: alert-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes alert-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 90, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 0.45rem rgba(255, 107, 90, 0);
+  }
+}
+
 .group-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -448,6 +670,10 @@ a:hover {
 
 @media (max-width: 980px) {
   .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .demo-grid {
     grid-template-columns: 1fr;
   }
 
