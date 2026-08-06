@@ -31,7 +31,6 @@ import {
   locationDrawerHtml,
   metricDrawerHtml,
   alertDrawerHtml,
-  buildAttentionItems,
 } from "./ui/sections.js";
 
 const state = {
@@ -61,9 +60,11 @@ const state = {
       revenueCents: 0,
       materialCount: 0,
       byChannel: [],
+      chain: { pending: 0, anchored: 0, failed: 0 },
     },
     rows: [],
   },
+  verifyResult: null,
   asOf: null,
   sim: null,
   live: false,
@@ -302,6 +303,28 @@ function bindDrawerBodyActions() {
       );
     });
   });
+  body.querySelector("[data-verify-order]")?.addEventListener("click", () => {
+    verifySelectedOrder(false);
+  });
+  body.querySelector("[data-tamper-order]")?.addEventListener("click", () => {
+    verifySelectedOrder(true);
+  });
+}
+
+async function verifySelectedOrder(tamper = false) {
+  const id = state.selectedOrderId;
+  if (!id) return;
+  try {
+    const params = new URLSearchParams({ orderId: id });
+    if (tamper) params.set("tamper", "1");
+    const res = await fetch(apiUrl(`/api/verify?${params}`));
+    const data = await res.json();
+    state.verifyResult = data;
+    openOrderDrawer(id);
+  } catch (err) {
+    state.verifyResult = { ok: false, orderId: id, error: err.message };
+    openOrderDrawer(id);
+  }
 }
 
 function reviewAlerts() {
@@ -419,17 +442,19 @@ function render() {
   renderDeliveryTile(el.delivery, state, state.tilePrefs, storeHandlers);
   renderUtilitiesTile(el.utilities, state, state.tilePrefs, storeHandlers);
 
-  renderDemoTile(el.demo, state, state.tilePrefs, demo, {
-    onReset: () => {
-      state.selectedId = null;
-      state.selectedOrderId = null;
-      state.orderFilter = "all";
-      state.orderStoreFilter = null;
-      demo.reset();
-      Promise.all([loadSnapshot(true), loadOrders()]).then(render);
-    },
-    onYes: () => demo.approveEnrichment(),
-  });
+  if (el.demo) {
+    renderDemoTile(el.demo, state, state.tilePrefs, demo, {
+      onReset: () => {
+        state.selectedId = null;
+        state.selectedOrderId = null;
+        state.orderFilter = "all";
+        state.orderStoreFilter = null;
+        demo.reset();
+        Promise.all([loadSnapshot(true), loadOrders()]).then(render);
+      },
+      onYes: () => demo.approveEnrichment(),
+    });
+  }
 
   if (tileCleanup) tileCleanup();
   tileCleanup = bindTileControls(el.tileStack, {
@@ -551,6 +576,3 @@ async function boot() {
 }
 
 boot();
-
-// Silence unused import warning path for buildAttentionItems in some bundlers
-void buildAttentionItems;

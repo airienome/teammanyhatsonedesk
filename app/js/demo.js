@@ -5,15 +5,15 @@ import {
   OWNER_RADAR_AGENT_PROMPT,
 } from "../data/stores.js";
 
-/** Live webhook path — no scripted cashier demo. */
+/** Live webhook path — escalate when a shop looks unusually off, not a fixed pizza count. */
 const OWNER_LINES = [
   {
     who: "OwnerRadar → Owner (partner)",
-    text: `Hey — Joe's Miami Wynwood just took a material catering order (~${DEMO_ORDER.qty} pies for ${DEMO_ORDER.where}). Estimated ~$${DEMO_ORDER.value.toLocaleString()}. We can supply it, but you should know.`,
+    text: "Hey — one of your Joe's shops looks off versus the rest of the network. We can supply through the other locations, but you should know.",
   },
   {
     who: "OwnerRadar → Owner (partner)",
-    text: "Want me to find who's running that event? There might be more catering in it — I can look up who's in charge and text you their LinkedIn and public info.",
+    text: "Want me to find who's driving the demand spike? There might be more catering in it — I can look up who's in charge and text you their LinkedIn and public info.",
   },
 ];
 
@@ -53,22 +53,18 @@ export function createDemoController({ onStage, render }) {
 
   function ownerTranscript() {
     if (stage === "owner_call" || stage === "enrich" || stage === "found") {
-      return OWNER_LINES.map((line) => {
-        if (!liveCase) return line;
-        const qty = liveCase.qty || DEMO_ORDER.qty;
-        const where = liveCase.where || DEMO_ORDER.where;
-        const value = liveCase.value || DEMO_ORDER.value;
-        return {
-          ...line,
-          text: line.text
-            .replace(String(DEMO_ORDER.qty), String(qty))
-            .replace(DEMO_ORDER.where, where)
-            .replace(
-              DEMO_ORDER.value.toLocaleString(),
-              Number(value).toLocaleString()
-            ),
-        };
-      });
+      if (!liveCase?.breachSummary && !liveCase?.qty) return OWNER_LINES;
+      const qtyBit = liveCase.qty ? `${liveCase.qty} pies` : "a demand spike";
+      const whereBit = liveCase.where || "the venue";
+      const spcBit =
+        liveCase.breachSummary || "something unusual versus other shops or this week's usual";
+      return [
+        {
+          who: "OwnerRadar → Owner (partner)",
+          text: `Hey — ${liveCase.storeName || "a Joe's store"} needs a look (${spcBit}). Related order: ${qtyBit} for ${whereBit}. We can supply through the network, but you should know.`,
+        },
+        OWNER_LINES[1],
+      ];
     }
     return [];
   }

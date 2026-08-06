@@ -2,6 +2,7 @@ import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
 import { latestBalance, recomputeStoreKpi } from "../lib/kpi.mjs";
 import { demandMultiplier } from "../lib/sim-time.mjs";
+import { flushPendingAnchors, queueOrderAnchor } from "../lib/chain.mjs";
 
 const sql = neon(process.env.DATABASE_URL);
 
@@ -99,10 +100,13 @@ export async function tickStore(store, at = new Date()) {
         ${refunded ? "refunded" : "paid"},
         ${atIso}
       )
-      RETURNING id
+      RETURNING *
     `;
-    // Routine sim orders stay off-chain — only material catering anchors
-    void orderRows;
+    try {
+      await queueOrderAnchor(orderRows[0]);
+    } catch (err) {
+      console.warn("[chain] queue failed:", err?.message || err);
+    }
 
     for (const [sku, min, par] of [
       ["dough", 20, 90],
@@ -232,8 +236,16 @@ export async function simulateTick(at = new Date()) {
     console.warn("[sim] sim_state update failed:", err?.message || err);
   }
 
-  // Chain flush is separate (/api/verify?flush=1) — keep cron ticks fast & reliable
-  return { stores: summary, chain: null };
+  // Push queued order hashes onto Solana (skips cheaply if wallet unfunded)
+  let chain = { attempted: 0, anchored: 0, failed: 0, skipped: 0 };
+  try {
+    chain = await flushPendingAnchors({ limit: 8 });
+  } catch (err) {
+    console.warn("[chain] flush failed:", err?.message || err);
+    chain = { ...chain, error: err?.message || String(err) };
+  }
+
+  return { stores: summary, chain };
 }
 
 const isMain = process.argv[1] && process.argv[1].endsWith("simulate.mjs");
@@ -243,7 +255,7 @@ if (isMain) {
   console.log(`Realistic Joe's sim every ${intervalMs}ms…`);
   const run = async () => {
     try {
-      const { stores: summary } = await simulateTick();
+      const { stores: summary, chain } = await simulateTick();
       const stamp = new Date().toLocaleTimeString("en-US", {
         timeZone: "America/New_York",
       });
@@ -252,7 +264,10 @@ if (isMain) {
         summary
           .filter((s) => s.events.length)
           .map((s) => `${s.store}:{${s.events.join(",")}}`)
-          .join(" | ") || "quiet"
+          .join(" | ") || "quiet",
+        chain?.anchored || chain?.skipped || chain?.failed
+          ? `| chain a=${chain.anchored || 0} f=${chain.failed || 0} s=${chain.skipped || 0}`
+          : ""
       );
     } catch (err) {
       console.error(err);

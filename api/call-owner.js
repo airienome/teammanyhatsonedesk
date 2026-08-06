@@ -1,20 +1,21 @@
-import { placeOwnerCall } from "../lib/call-owner.mjs";
+import { dialOwnerForOutOfControl } from "../lib/call-owner.mjs";
+import { ALERT_Z } from "../lib/spc.mjs";
 
 /**
- * Manager tool webhook — OwnerRadar dials the hackathon partner ("owner").
+ * OwnerRadar manager webhook — dials the hackathon partner only when
+ * live KPIs are outside statistical control (≥ ALERT_Z σ).
  *
- * Paste into Retell / ElevenLabs as a custom function / webhook tool:
- *   POST https://teammanyhatsonedesk.vercel.app/api/call-owner
+ * POST https://teammanyhatsonedesk.vercel.app/api/call-owner
  *
- * Body (all optional — pulls from material case defaults):
+ * Body (all optional):
  * {
- *   "qty": 300,
- *   "when": "ASAP",
- *   "where": "the dock, Wynwood",
- *   "item": "cheese pies",
- *   "caseId": "ORDER-300-HACKATHON",
- *   "to": "+1XXXXXXXXXX"   // optional override; else OWNER_PHONE env
+ *   "storeId": "miami-wynwood",  // limit to one store; else all OOC stores
+ *   "force": false,              // bypass cooldown only (still requires ≥2σ)
+ *   "to": "+1XXXXXXXXXX"         // override OWNER_PHONE
  * }
+ *
+ * Does NOT hardcode order size. If every store is in control, returns
+ * status "in_control" and does not dial.
  */
 function parseBody(req) {
   if (!req.body) return {};
@@ -47,37 +48,73 @@ export default async function handler(req, res) {
     const body = parseBody(req);
     const args = body.args || body.arguments || body;
 
-    const result = await placeOwnerCall({
-      caseId: args.caseId || args.case_id || "ORDER-300-HACKATHON",
-      qty: Number(args.qty ?? args.quantity ?? 300),
-      when: String(args.when ?? "ASAP"),
-      where: String(args.where ?? args.location ?? "the dock, Wynwood"),
-      item: String(args.item ?? "cheese pies"),
-      storeId: String(args.storeId || args.store_id || "miami-wynwood"),
+    const result = await dialOwnerForOutOfControl({
+      storeId: args.storeId || args.store_id || null,
+      caseId: args.caseId || args.case_id || null,
+      force: Boolean(args.force),
       toNumber: args.to || args.to_number || args.phone || args.ownerPhone || null,
-      reason: String(args.reason || "manager_tool_call_owner"),
+      reason: String(args.reason || "spc_out_of_control"),
+      order:
+        args.qty || args.when || args.where || args.item
+          ? {
+              qty: args.qty != null ? Number(args.qty) : undefined,
+              when: args.when,
+              where: args.where || args.location,
+              item: args.item,
+              caseId: args.caseId || args.case_id,
+            }
+          : null,
     });
 
-    // Voice agents often need a short speakable result
+    if (!result.dialed.length) {
+      res.status(200).json({
+        ok: true,
+        status: "in_control",
+        alertZ: ALERT_Z,
+        message:
+          result.skipped[0]?.message ||
+          `No store outside statistical control (≥${ALERT_Z}σ). Owner not called.`,
+        skipped: result.skipped,
+        analysis: result.analysis,
+      });
+      return;
+    }
+
+    const first = result.dialed[0];
     res.status(200).json({
       ok: true,
       status: "dialing",
-      message: result.message,
-      caseId: result.caseId,
-      provider: result.provider,
-      callId: result.callId,
-      toMasked: result.toMasked,
+      alertZ: ALERT_Z,
+      message: first.message,
+      caseId: first.caseId,
+      provider: first.provider,
+      callId: first.callId,
+      toMasked: first.toMasked,
+      breachSummary: first.breachSummary,
+      dialed: result.dialed.map((d) => ({
+        storeId: d.storeId,
+        storeName: d.storeName,
+        caseId: d.caseId,
+        breachSummary: d.breachSummary,
+        callId: d.callId,
+      })),
+      skipped: result.skipped,
+      analysis: result.analysis,
     });
   } catch (err) {
     console.error(err);
     const status =
       err.code === "NO_OWNER_PHONE" || err.code === "NO_DIAL_PROVIDER"
         ? 503
-        : 500;
+        : err.code === "IN_CONTROL"
+          ? 200
+          : 500;
     res.status(status).json({
-      ok: false,
+      ok: err.code === "IN_CONTROL",
+      status: err.code === "IN_CONTROL" ? "in_control" : "error",
       error: err.message || "Failed to call owner",
       code: err.code || "CALL_OWNER_FAILED",
+      alertZ: ALERT_Z,
     });
   }
 }

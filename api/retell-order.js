@@ -1,13 +1,10 @@
 import { insertCateringOrder } from "../lib/orders.mjs";
 import { fetchNetworkSnapshot } from "../lib/snapshot.mjs";
+import { ALERT_Z } from "../lib/spc.mjs";
 
 /**
  * Retell custom function + post-call webhook entry.
- *
- * Custom function args (preferred, mid-call):
- *   { qty, when, where, store_id? }
- *
- * Or call_analyzed payload — we scrape qty/where from analysis / transcript.
+ * Escalation is SPC (≥2σ), not a fixed pizza count.
  */
 function parseBody(req) {
   if (!req.body) return {};
@@ -28,17 +25,15 @@ function extractFromRetell(body) {
     body.call_analysis?.custom_analysis_data ||
     {};
 
-  const qty = Number(
-    args.qty ?? args.quantity ?? analysis.qty ?? analysis.quantity ?? 300
-  );
+  const qtyRaw = args.qty ?? args.quantity ?? analysis.qty ?? analysis.quantity;
+  const qty = qtyRaw != null ? Number(qtyRaw) : null;
   const when = String(args.when ?? analysis.when ?? "ASAP");
   const where = String(
     args.where ?? args.location ?? analysis.where ?? "the dock, Wynwood"
   );
-  const storeId = "miami-wynwood";
   const callId = body.call?.call_id || body.call_id || null;
 
-  return { qty, when, where, storeId, callId };
+  return { qty, when, where, callId };
 }
 
 export default async function handler(req, res) {
@@ -58,37 +53,49 @@ export default async function handler(req, res) {
   try {
     const body = parseBody(req);
 
-    // Ignore non-order Retell lifecycle events if they hit this URL
     const event = body.event || body.name;
     if (event && !["call_analyzed", "call_ended"].includes(event) && !body.args && !body.qty) {
-      // Still allow custom function calls that don't set event
       if (!body.call_analysis && !body.call?.call_analysis) {
         res.status(200).json({ ok: true, ignored: event });
         return;
       }
     }
 
-    const { qty, when, where, storeId, callId } = extractFromRetell(body);
+    const { qty, when, where, callId } = extractFromRetell(body);
+    if (qty == null || Number.isNaN(qty)) {
+      res.status(400).json({
+        error: "qty is required — pass the pizza count from the conversation",
+      });
+      return;
+    }
+
     const result = await insertCateringOrder({
-      storeId,
       qty,
       when,
       where,
       channel: "phone",
-      caseId: callId ? `CALL-${callId}` : "ORDER-300-HACKATHON",
+      caseId: callId ? `CALL-${callId}` : null,
       callerLabel: "retell_voice",
       note: `${qty} pies · ${when} · ${where}${callId ? ` · call ${callId}` : ""}`,
     });
 
     const snapshot = await fetchNetworkSnapshot();
+    const spcNote = result.outOfControl
+      ? ` Out of control ≥${ALERT_Z}σ (${result.breachSummary}).`
+      : ` Within ${ALERT_Z}σ — owner not called.`;
 
-    // Retell custom functions often expect a string/JSON result for the LLM
     res.status(200).json({
       ok: true,
       status: "entered",
-      message: `Order entered: ${qty} pies ${when} to ${where}. KPIs recomputed — capacity util ${result.kpi.capacityUtil}%.`,
+      message: `Order entered: ${qty} pies ${when} to ${where}. Capacity util ${result.kpi.capacityUtil}%.${spcNote}`,
       caseId: result.caseId,
-      isMaterial: result.isMaterial,
+      isMaterial: result.outOfControl,
+      outOfControl: result.outOfControl,
+      alertZ: ALERT_Z,
+      breachSummary: result.breachSummary,
+      ownerCall: result.ownerCall
+        ? { dialed: result.ownerCall.dialed?.length || 0 }
+        : null,
       kpi: {
         capacityUtil: result.kpi.capacityUtil,
         inventoryDays: result.kpi.inventoryDays,

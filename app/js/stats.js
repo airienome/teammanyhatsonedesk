@@ -57,23 +57,119 @@ export function formatKpi(value, format) {
   }
 }
 
-function directionLabel(z, higherIsBetter) {
-  const above = z > 0;
-  if (higherIsBetter) {
-    return above ? "above" : "below";
-  }
-  return above ? "above" : "below";
-}
-
 function isAdverse(z, higherIsBetter) {
   return higherIsBetter ? z < 0 : z > 0;
 }
 
-function buildSuggestionCopy(store, def, z, baselineLabel, baselineValue, value) {
-  const dir = directionLabel(z, def.higherIsBetter);
-  const adverse = isAdverse(z, def.higherIsBetter);
-  const tone = adverse ? "Review" : "Note";
-  return `${store.name} ${def.label.toLowerCase()} is ${Math.abs(z).toFixed(1)}σ ${dir} ${baselineLabel} (${formatKpi(value, def.format)} vs ${formatKpi(baselineValue, def.format)}). ${tone}: ${def.suggestion}`;
+/** Owner-facing metric name (no ops jargon). */
+function plainMetric(def) {
+  const map = {
+    revenue: "sales",
+    orders: "orders",
+    avgTicket: "average ticket",
+    capacityUtil: "kitchen load",
+    refundRate: "refunds",
+    discountRate: "discounting",
+    deliveryEta: "delivery times",
+    staffingFill: "staffing",
+    inventoryDays: "inventory cover",
+  };
+  return map[def.key] || def.label.toLowerCase();
+}
+
+function compareAgainst(source) {
+  return source === "peer" ? "your other shops" : "this shop's usual week";
+}
+
+function sourcePlain(source) {
+  return source === "peer" ? "other shops" : "this shop's last 7 days";
+}
+
+/**
+ * Plain-language alert for pizza owners.
+ * Math stays in `math` for the info (i) control.
+ */
+function buildSuggestionNarratives(store, def, z, source, baselineValue, value) {
+  const vs = formatKpi(value, def.format);
+  const base = formatKpi(baselineValue, def.format);
+  const against = compareAgainst(source);
+  const above = z > 0;
+  const metric = plainMetric(def);
+
+  let headline;
+  let body;
+
+  switch (def.key) {
+    case "orders":
+      headline = above
+        ? `${store.name} is busier than ${against}`
+        : `${store.name} is quieter than ${against}`;
+      body = above
+        ? `${store.name} has ${vs} orders today vs about ${base} at ${against}. Make sure the kitchen and front counter can keep up.`
+        : `${store.name} has ${vs} orders today vs about ${base} at ${against}. ${def.suggestion}`;
+      break;
+    case "deliveryEta":
+      headline = `${store.name} deliveries are running slow`;
+      body = `Deliveries are averaging ${vs} vs about ${base} for ${against}. ${def.suggestion}`;
+      break;
+    case "capacityUtil":
+      headline = above
+        ? `${store.name}'s kitchen is slammed`
+        : `${store.name}'s kitchen is quieter than usual`;
+      body = above
+        ? `Kitchen load is ${vs} vs about ${base} for ${against}. ${def.suggestion}`
+        : `Kitchen load is ${vs} vs about ${base} for ${against}. Fine if demand is soft — otherwise check why tickets are down.`;
+      break;
+    case "discountRate":
+      headline = `${store.name} is discounting more than usual`;
+      body = `Discounts are at ${vs} vs about ${base} for ${against}. ${def.suggestion}`;
+      break;
+    case "refundRate":
+      headline = `${store.name} refunds are elevated`;
+      body = `Refund rate is ${vs} vs about ${base} for ${against}. ${def.suggestion}`;
+      break;
+    case "inventoryDays":
+      headline = above
+        ? `${store.name} is overstocked`
+        : `${store.name} may run short on inventory`;
+      body = above
+        ? `Inventory cover is ${vs} vs about ${base} for ${against}.`
+        : `Inventory cover is ${vs} vs about ${base} for ${against}. ${def.suggestion}`;
+      break;
+    case "staffingFill":
+      headline = above
+        ? `${store.name} is overstaffed vs usual`
+        : `${store.name} looks short-staffed`;
+      body = `Staffing is ${vs} vs about ${base} for ${against}. ${def.suggestion}`;
+      break;
+    case "revenue":
+      headline = above
+        ? `${store.name} sales are up vs ${against}`
+        : `${store.name} sales are down vs ${against}`;
+      body = `Sales are ${vs} vs about ${base}. ${def.suggestion}`;
+      break;
+    case "avgTicket":
+      headline = above
+        ? `${store.name} tickets are larger than usual`
+        : `${store.name} tickets are smaller than usual`;
+      body = `Average ticket is ${vs} vs about ${base} for ${against}. ${def.suggestion}`;
+      break;
+    default:
+      headline = `${store.name}: ${metric} looks off`;
+      body = `${metric} is ${above ? "higher" : "lower"} than ${against} (${vs} vs about ${base}). ${def.suggestion}`;
+  }
+
+  const math = [
+    `${def.label}: ${vs}`,
+    `Compared to ${sourcePlain(source)}: ${base}`,
+    `Gap score: ${z >= 0 ? "+" : ""}${z.toFixed(2)}σ (alert at ±2.0σ, watch at ±1.5σ)`,
+  ].join(" · ");
+
+  return {
+    title: headline,
+    copy: body,
+    math,
+  };
 }
 
 export function analyzeStores(stores = STORES, defs = KPI_DEFS) {
@@ -95,26 +191,30 @@ export function analyzeStores(stores = STORES, defs = KPI_DEFS) {
       const peerSeverity = severityFromZ(peerZ);
 
       if (peerSeverity !== "ok" && isAdverse(peerZ, def.higherIsBetter)) {
+        const narrative = buildSuggestionNarratives(
+          store,
+          def,
+          peerZ,
+          "peer",
+          peer.mean,
+          value
+        );
         kpiFlags.push({
           storeId: store.id,
           storeName: store.name,
           kpi: def.key,
           label: def.label,
+          plainLabel: plainMetric(def),
           source: "peer",
-          sourceLabel: "peer group",
+          sourceLabel: "other shops",
           value,
           baseline: peer.mean,
           z: peerZ,
           severity: peerSeverity,
           format: def.format,
-          copy: buildSuggestionCopy(
-            store,
-            def,
-            peerZ,
-            "peer mean",
-            peer.mean,
-            value
-          ),
+          title: narrative.title,
+          copy: narrative.copy,
+          math: narrative.math,
         });
       }
 
@@ -127,26 +227,30 @@ export function analyzeStores(stores = STORES, defs = KPI_DEFS) {
       const histSeverity = severityFromZ(histZ);
 
       if (histSeverity !== "ok" && isAdverse(histZ, def.higherIsBetter)) {
+        const narrative = buildSuggestionNarratives(
+          store,
+          def,
+          histZ,
+          "history",
+          histMean,
+          value
+        );
         kpiFlags.push({
           storeId: store.id,
           storeName: store.name,
           kpi: def.key,
           label: def.label,
+          plainLabel: plainMetric(def),
           source: "history",
-          sourceLabel: "own 7-day history",
+          sourceLabel: "this shop's usual week",
           value,
           baseline: histMean,
           z: histZ,
           severity: histSeverity,
           format: def.format,
-          copy: buildSuggestionCopy(
-            store,
-            def,
-            histZ,
-            "its 7-day mean",
-            histMean,
-            value
-          ),
+          title: narrative.title,
+          copy: narrative.copy,
+          math: narrative.math,
         });
       }
     }

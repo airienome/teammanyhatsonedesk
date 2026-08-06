@@ -6,7 +6,7 @@
     <title>OwnerRadar — Joe's Pizza Command Center</title>
     <meta
       name="description"
-      content="OwnerRadar command center for Joe's Pizza — live locations, KPIs, and owner attention."
+      content="OwnerRadar command center for Joe's Pizza locations, KPIs, and the 300-pizza Wynwood hackathon demo."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -53,10 +53,14 @@
       </label>
 
       <div class="command-actions">
+        <button type="button" class="btn btn-ghost" data-replay-demo>Replay Demo</button>
+        <button type="button" class="btn btn-ghost" data-pause-sim aria-pressed="false">
+          Pause Simulation
+        </button>
         <details class="user-menu">
           <summary class="user-menu-trigger" aria-label="User menu">Owner</summary>
           <div class="user-menu-panel">
-            <p>Signed in as owner</p>
+            <p>Hackathon partner session</p>
             <a href="../">Back to OwnerRadar</a>
           </div>
         </details>
@@ -98,6 +102,7 @@
         <div data-tile-discounts></div>
         <div data-tile-delivery></div>
         <div data-tile-utilities></div>
+        <div data-tile-demo></div>
       </div>
     </main>
 

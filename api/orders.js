@@ -1,5 +1,7 @@
 import { getSql } from "../lib/snapshot.mjs";
-import { MATERIAL_PIZZA_THRESHOLD } from "../lib/orders.mjs";
+import { ALERT_Z } from "../lib/spc.mjs";
+import { serializeReceipt } from "../lib/chain.mjs";
+import { explorerTxUrl, getCluster } from "../lib/solana.mjs";
 
 function parseItems(raw) {
   if (Array.isArray(raw)) return raw;
@@ -26,12 +28,40 @@ function parseWhenWhere(primary = {}) {
   return { when: null, where: null };
 }
 
+function chainFromRow(row) {
+  if (!row.chain_hash && !row.chain_status) return null;
+  return serializeReceipt({
+    order_id: row.id,
+    payload_hash: row.chain_hash,
+    status: row.chain_status,
+    signature: row.chain_signature,
+    slot: row.chain_slot,
+    cluster: row.chain_cluster || getCluster(),
+    explorer_url:
+      row.chain_explorer_url ||
+      (row.chain_signature
+        ? explorerTxUrl(row.chain_signature, row.chain_cluster || getCluster())
+        : null),
+    error: row.chain_error,
+    anchored_at: row.chain_anchored_at,
+    created_at: row.chain_created_at,
+  });
+}
+
+function isOutOfControlItem(primary = {}) {
+  return (
+    primary.outOfControl === true ||
+    primary.outOfControl === "true" ||
+    primary.spc?.outOfControl === true
+  );
+}
+
 function enrichOrder(row) {
   const items = parseItems(row.items_json);
   const primary = items[0] || {};
   const { when, where } = parseWhenWhere(primary);
   const pizzaCount = Number(row.pizza_count) || 0;
-  const isMaterial = pizzaCount >= MATERIAL_PIZZA_THRESHOLD;
+  const outOfControl = isOutOfControlItem(primary);
   return {
     id: row.id,
     storeId: row.store_id,
@@ -50,7 +80,11 @@ function enrichOrder(row) {
     whenNeeded: when,
     deliveryWhere: where,
     note: primary.note || null,
-    isMaterial,
+    isMaterial: outOfControl,
+    outOfControl,
+    breachSummary: primary.breachSummary || null,
+    alertZ: primary.alertZ || ALERT_Z,
+    chain: chainFromRow(row),
   };
 }
 
@@ -85,9 +119,19 @@ export default async function handler(req, res) {
             s.name AS store_name,
             s.neighborhood,
             s.city,
-            s.address
+            s.address,
+            c.payload_hash AS chain_hash,
+            c.status AS chain_status,
+            c.signature AS chain_signature,
+            c.slot AS chain_slot,
+            c.explorer_url AS chain_explorer_url,
+            c.cluster AS chain_cluster,
+            c.error AS chain_error,
+            c.anchored_at AS chain_anchored_at,
+            c.created_at AS chain_created_at
           FROM pos_orders o
           JOIN stores s ON s.id = o.store_id
+          LEFT JOIN chain_receipts c ON c.order_id = o.id
           WHERE o.id = ${orderId}
           LIMIT 1
         `
@@ -99,11 +143,24 @@ export default async function handler(req, res) {
                 s.name AS store_name,
                 s.neighborhood,
                 s.city,
-                s.address
+                s.address,
+                c.payload_hash AS chain_hash,
+                c.status AS chain_status,
+                c.signature AS chain_signature,
+                c.slot AS chain_slot,
+                c.explorer_url AS chain_explorer_url,
+                c.cluster AS chain_cluster,
+                c.error AS chain_error,
+                c.anchored_at AS chain_anchored_at,
+                c.created_at AS chain_created_at
               FROM pos_orders o
               JOIN stores s ON s.id = o.store_id
+              LEFT JOIN chain_receipts c ON c.order_id = o.id
               WHERE o.store_id = ${storeId}
-                AND o.pizza_count >= ${MATERIAL_PIZZA_THRESHOLD}
+                AND (
+                  (o.items_json->0->>'outOfControl') = 'true'
+                  OR o.pizza_count >= s.capacity_pizzas
+                )
               ORDER BY o.occurred_at DESC
               LIMIT ${limit}
             `
@@ -113,9 +170,19 @@ export default async function handler(req, res) {
                 s.name AS store_name,
                 s.neighborhood,
                 s.city,
-                s.address
+                s.address,
+                c.payload_hash AS chain_hash,
+                c.status AS chain_status,
+                c.signature AS chain_signature,
+                c.slot AS chain_slot,
+                c.explorer_url AS chain_explorer_url,
+                c.cluster AS chain_cluster,
+                c.error AS chain_error,
+                c.anchored_at AS chain_anchored_at,
+                c.created_at AS chain_created_at
               FROM pos_orders o
               JOIN stores s ON s.id = o.store_id
+              LEFT JOIN chain_receipts c ON c.order_id = o.id
               WHERE o.store_id = ${storeId}
               ORDER BY o.occurred_at DESC
               LIMIT ${limit}
@@ -127,10 +194,23 @@ export default async function handler(req, res) {
                 s.name AS store_name,
                 s.neighborhood,
                 s.city,
-                s.address
+                s.address,
+                c.payload_hash AS chain_hash,
+                c.status AS chain_status,
+                c.signature AS chain_signature,
+                c.slot AS chain_slot,
+                c.explorer_url AS chain_explorer_url,
+                c.cluster AS chain_cluster,
+                c.error AS chain_error,
+                c.anchored_at AS chain_anchored_at,
+                c.created_at AS chain_created_at
               FROM pos_orders o
               JOIN stores s ON s.id = o.store_id
-              WHERE o.pizza_count >= ${MATERIAL_PIZZA_THRESHOLD}
+              LEFT JOIN chain_receipts c ON c.order_id = o.id
+              WHERE (
+                  (o.items_json->0->>'outOfControl') = 'true'
+                  OR o.pizza_count >= s.capacity_pizzas
+                )
               ORDER BY o.occurred_at DESC
               LIMIT ${limit}
             `
@@ -140,9 +220,19 @@ export default async function handler(req, res) {
                 s.name AS store_name,
                 s.neighborhood,
                 s.city,
-                s.address
+                s.address,
+                c.payload_hash AS chain_hash,
+                c.status AS chain_status,
+                c.signature AS chain_signature,
+                c.slot AS chain_slot,
+                c.explorer_url AS chain_explorer_url,
+                c.cluster AS chain_cluster,
+                c.error AS chain_error,
+                c.anchored_at AS chain_anchored_at,
+                c.created_at AS chain_created_at
               FROM pos_orders o
               JOIN stores s ON s.id = o.store_id
+              LEFT JOIN chain_receipts c ON c.order_id = o.id
               ORDER BY o.occurred_at DESC
               LIMIT ${limit}
             `;
@@ -154,7 +244,12 @@ export default async function handler(req, res) {
             COALESCE(SUM(pizza_count), 0)::int AS pizza_count,
             COALESCE(SUM(ticket_cents), 0)::int AS revenue_cents,
             COALESCE(
-              SUM(CASE WHEN pizza_count >= ${MATERIAL_PIZZA_THRESHOLD} THEN 1 ELSE 0 END),
+              SUM(
+                CASE
+                  WHEN (items_json->0->>'outOfControl') = 'true' THEN 1
+                  ELSE 0
+                END
+              ),
               0
             )::int AS material_count
           FROM pos_orders
@@ -168,7 +263,12 @@ export default async function handler(req, res) {
             COALESCE(SUM(pizza_count), 0)::int AS pizza_count,
             COALESCE(SUM(ticket_cents), 0)::int AS revenue_cents,
             COALESCE(
-              SUM(CASE WHEN pizza_count >= ${MATERIAL_PIZZA_THRESHOLD} THEN 1 ELSE 0 END),
+              SUM(
+                CASE
+                  WHEN (items_json->0->>'outOfControl') = 'true' THEN 1
+                  ELSE 0
+                END
+              ),
               0
             )::int AS material_count
           FROM pos_orders
@@ -195,6 +295,22 @@ export default async function handler(req, res) {
           ORDER BY count DESC
         `;
 
+    let chainSummary = { pending: 0, anchored: 0, failed: 0 };
+    try {
+      const chainRows = await sql`
+        SELECT status, COUNT(*)::int AS count
+        FROM chain_receipts
+        GROUP BY status
+      `;
+      for (const r of chainRows) {
+        if (r.status === "pending") chainSummary.pending = Number(r.count) || 0;
+        if (r.status === "anchored") chainSummary.anchored = Number(r.count) || 0;
+        if (r.status === "failed") chainSummary.failed = Number(r.count) || 0;
+      }
+    } catch {
+      /* table may not exist yet on stale deploy */
+    }
+
     const summary = summaryRows[0] || {
       order_count: 0,
       pizza_count: 0,
@@ -205,7 +321,7 @@ export default async function handler(req, res) {
     res.status(200).json({
       ok: true,
       asOf: new Date().toISOString(),
-      materialThreshold: MATERIAL_PIZZA_THRESHOLD,
+      alertZ: ALERT_Z,
       summary: {
         orderCount: Number(summary.order_count) || 0,
         pizzaCount: Number(summary.pizza_count) || 0,
@@ -215,6 +331,7 @@ export default async function handler(req, res) {
           channel: r.channel,
           count: Number(r.count) || 0,
         })),
+        chain: chainSummary,
       },
       orders: orders.map(enrichOrder),
     });
