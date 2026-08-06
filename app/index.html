@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OwnerRadar — Miami Slice Command Center</title>
+    <meta
+      name="description"
+      content="OwnerRadar command center for Miami Slice Group stores, KPIs, and statistical compliance."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="atmosphere" aria-hidden="true">
+      <div class="radar-grid"></div>
+      <div class="glow glow-a"></div>
+    </div>
+
+    <header class="app-top">
+      <div class="brand-lockup">
+        <a class="back" href="../">OwnerRadar</a>
+        <span class="divider" aria-hidden="true">/</span>
+        <h1>Miami Slice Group</h1>
+      </div>
+      <div class="app-top-meta">
+        <p data-as-of></p>
+        <p class="open-badge">Open demo · no login</p>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="group-strip" data-group-strip aria-label="Group KPIs"></section>
+
+      <div class="workspace">
+        <section class="stores-panel" aria-labelledby="stores-heading">
+          <div class="panel-head">
+            <h2 id="stores-heading">Stores</h2>
+            <p>Status from peer and 7-day statistical compliance</p>
+          </div>
+          <div class="store-grid" data-store-grid></div>
+          <div class="store-detail" data-store-detail></div>
+        </section>
+
+        <aside class="attention-panel" data-attention aria-label="Owner attention"></aside>
+      </div>
+    </main>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
