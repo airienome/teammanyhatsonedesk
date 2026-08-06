@@ -2,7 +2,6 @@ import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
 import { latestBalance, recomputeStoreKpi } from "../lib/kpi.mjs";
 import { demandMultiplier } from "../lib/sim-time.mjs";
-import { flushPendingAnchors, queueOrderAnchor } from "../lib/chain.mjs";
 
 const sql = neon(process.env.DATABASE_URL);
 
@@ -100,13 +99,10 @@ export async function tickStore(store, at = new Date()) {
         ${refunded ? "refunded" : "paid"},
         ${atIso}
       )
-      RETURNING *
+      RETURNING id
     `;
-    try {
-      await queueOrderAnchor(orderRows[0]);
-    } catch (err) {
-      console.warn("[chain] queue failed:", err?.message || err);
-    }
+    // Routine sim orders stay off-chain — only material catering anchors
+    void orderRows;
 
     for (const [sku, min, par] of [
       ["dough", 20, 90],
@@ -220,23 +216,24 @@ export async function simulateTick(at = new Date()) {
   const stores = await sql`SELECT * FROM stores ORDER BY name`;
   const summary = [];
   for (const store of stores) {
-    const events = await tickStore(store, at);
-    summary.push({ store: store.id, events });
+    try {
+      const events = await tickStore(store, at);
+      summary.push({ store: store.id, events });
+    } catch (err) {
+      console.error(`[sim] ${store.id} tick failed:`, err?.message || err);
+      summary.push({ store: store.id, events: [], error: err?.message || String(err) });
+    }
   }
-  await sql`
-    UPDATE sim_state SET last_tick_at = ${at.toISOString()} WHERE id = 1
-  `.catch(() => null);
-
-  // Push queued order hashes onto Solana (memo txs) after the ops pulse
-  let chain = { attempted: 0, anchored: 0, failed: 0, skipped: 0 };
   try {
-    chain = await flushPendingAnchors({ limit: 25 });
+    await sql`
+      UPDATE sim_state SET last_tick_at = ${at.toISOString()} WHERE id = 1
+    `;
   } catch (err) {
-    console.warn("[chain] flush failed:", err?.message || err);
-    chain = { ...chain, error: err?.message || String(err) };
+    console.warn("[sim] sim_state update failed:", err?.message || err);
   }
 
-  return { stores: summary, chain };
+  // Chain flush is separate (/api/verify?flush=1) — keep cron ticks fast & reliable
+  return { stores: summary, chain: null };
 }
 
 const isMain = process.argv[1] && process.argv[1].endsWith("simulate.mjs");
@@ -246,7 +243,7 @@ if (isMain) {
   console.log(`Realistic Joe's sim every ${intervalMs}ms…`);
   const run = async () => {
     try {
-      const { stores: summary, chain } = await simulateTick();
+      const { stores: summary } = await simulateTick();
       const stamp = new Date().toLocaleTimeString("en-US", {
         timeZone: "America/New_York",
       });
@@ -255,10 +252,7 @@ if (isMain) {
         summary
           .filter((s) => s.events.length)
           .map((s) => `${s.store}:{${s.events.join(",")}}`)
-          .join(" | ") || "quiet",
-        chain?.anchored || chain?.skipped || chain?.failed
-          ? `| chain a=${chain.anchored || 0} f=${chain.failed || 0} s=${chain.skipped || 0}`
-          : ""
+          .join(" | ") || "quiet"
       );
     } catch (err) {
       console.error(err);

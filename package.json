@@ -11,7 +11,8 @@
     "db:reset": "node scripts/migrate.mjs && node scripts/seed.mjs",
     "solana:wallet": "node scripts/solana-wallet.mjs",
     "solana:airdrop": "node scripts/solana-wallet.mjs --airdrop",
-    "solana:flush": "node scripts/anchor-pending.mjs"
+    "solana:flush": "node scripts/anchor-pending.mjs",
+    "solana:backfill": "node scripts/anchor-pending.mjs --backfill"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",

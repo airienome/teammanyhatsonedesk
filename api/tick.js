@@ -1,6 +1,10 @@
 import { simulateTick } from "../scripts/simulate.mjs";
 import { fetchNetworkSnapshot } from "../lib/snapshot.mjs";
 
+export const config = {
+  maxDuration: 60,
+};
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");
@@ -17,9 +21,19 @@ export default async function handler(req, res) {
   try {
     const result = await simulateTick();
     const summary = result?.stores || result;
-    const chain = result?.chain || null;
-    const snapshot = await fetchNetworkSnapshot();
-    res.status(200).json({ ok: true, summary, chain, snapshot });
+    // Cron hits this every minute — skip heavy snapshot unless client asks
+    const wantSnapshot =
+      req.method === "POST" ||
+      req.query?.snapshot === "1" ||
+      req.query?.snapshot === "true";
+    const snapshot = wantSnapshot ? await fetchNetworkSnapshot() : null;
+    res.status(200).json({
+      ok: true,
+      summary,
+      chain: result?.chain || null,
+      snapshot,
+      tickedAt: new Date().toISOString(),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || "Tick failed" });
