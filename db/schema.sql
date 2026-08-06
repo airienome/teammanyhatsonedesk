@@ -157,7 +157,7 @@ CREATE TABLE chain_receipts (
   payload_hash TEXT NOT NULL,
   payload_json JSONB NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'anchored', 'failed')),
+    CHECK (status IN ('pending', 'anchored', 'signed', 'failed')),
   signature TEXT,
   slot BIGINT,
   explorer_url TEXT,

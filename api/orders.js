@@ -30,18 +30,21 @@ function parseWhenWhere(primary = {}) {
 
 function chainFromRow(row) {
   if (!row.chain_hash && !row.chain_status) return null;
+  const cluster = row.chain_cluster || getCluster();
+  const onChain =
+    row.chain_status === "anchored" &&
+    row.chain_signature &&
+    cluster !== "signed";
   return serializeReceipt({
     order_id: row.id,
     payload_hash: row.chain_hash,
     status: row.chain_status,
     signature: row.chain_signature,
     slot: row.chain_slot,
-    cluster: row.chain_cluster || getCluster(),
+    cluster,
     explorer_url:
       row.chain_explorer_url ||
-      (row.chain_signature
-        ? explorerTxUrl(row.chain_signature, row.chain_cluster || getCluster())
-        : null),
+      (onChain ? explorerTxUrl(row.chain_signature, cluster) : null),
     error: row.chain_error,
     anchored_at: row.chain_anchored_at,
     created_at: row.chain_created_at,
@@ -295,7 +298,7 @@ export default async function handler(req, res) {
           ORDER BY count DESC
         `;
 
-    let chainSummary = { pending: 0, anchored: 0, failed: 0 };
+    let chainSummary = { pending: 0, anchored: 0, signed: 0, failed: 0 };
     try {
       const chainRows = await sql`
         SELECT status, COUNT(*)::int AS count
@@ -305,6 +308,7 @@ export default async function handler(req, res) {
       for (const r of chainRows) {
         if (r.status === "pending") chainSummary.pending = Number(r.count) || 0;
         if (r.status === "anchored") chainSummary.anchored = Number(r.count) || 0;
+        if (r.status === "signed") chainSummary.signed = Number(r.count) || 0;
         if (r.status === "failed") chainSummary.failed = Number(r.count) || 0;
       }
     } catch {

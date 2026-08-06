@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS chain_receipts (
   payload_hash TEXT NOT NULL,
   payload_json JSONB NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'anchored', 'failed')),
+    CHECK (status IN ('pending', 'anchored', 'signed', 'failed')),
   signature TEXT,
   slot BIGINT,
   explorer_url TEXT,
@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS chain_receipts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   anchored_at TIMESTAMPTZ
 );
+
+-- Widen status check if table already existed without 'signed'
+ALTER TABLE chain_receipts DROP CONSTRAINT IF EXISTS chain_receipts_status_check;
+ALTER TABLE chain_receipts ADD CONSTRAINT chain_receipts_status_check
+  CHECK (status IN ('pending', 'anchored', 'signed', 'failed'));
 
 CREATE INDEX IF NOT EXISTS idx_chain_status_created
   ON chain_receipts (status, created_at ASC);
