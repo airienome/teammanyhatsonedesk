@@ -478,7 +478,7 @@ a:hover {
 
 .executive-kpis {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space);
 }
 
@@ -563,6 +563,55 @@ a:hover {
 .tile-stack {
   display: grid;
   gap: var(--space);
+}
+
+.more-ops {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.more-ops-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+  list-style: none;
+}
+
+.more-ops-summary::-webkit-details-marker {
+  display: none;
+}
+
+.more-ops-summary::before {
+  content: "▸";
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-right: 0.15rem;
+}
+
+.more-ops[open] > .more-ops-summary::before {
+  content: "▾";
+}
+
+.more-ops-hint {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
+.more-ops-body {
+  display: grid;
+  gap: var(--space);
+  padding: 0 0.75rem 0.75rem;
 }
 
 /* ─── Collapsible tiles ─── */
@@ -1762,7 +1811,7 @@ button.detail-kpi:hover {
 
 @media (max-width: 1100px) {
   .executive-kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .order-row {

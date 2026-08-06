@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OwnerRadar — Joe's Pizza Command Center</title>
+    <title>OwnerRadar — Joe's Pizza</title>
     <meta
       name="description"
-      content="OwnerRadar command center for Joe's Pizza locations, KPIs, and the 300-pizza Wynwood hackathon demo."
+      content="OwnerRadar command center for Joe's Pizza — live locations, KPIs, and owner attention."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,28 +39,24 @@
         <span data-status-label>Connecting…</span>
       </div>
 
-      <p class="command-time" data-as-of>Connecting to Neon…</p>
+      <p class="command-time" data-as-of>Connecting…</p>
 
       <label class="command-search">
         <span class="sr-only">Command search</span>
         <input
           type="search"
           data-command-input
-          placeholder="Ask: locations with abnormal discounts…"
+          placeholder="Search locations, orders, alerts…"
           autocomplete="off"
           spellcheck="false"
         />
       </label>
 
       <div class="command-actions">
-        <button type="button" class="btn btn-ghost" data-replay-demo>Replay Demo</button>
-        <button type="button" class="btn btn-ghost" data-pause-sim aria-pressed="false">
-          Pause Simulation
-        </button>
         <details class="user-menu">
           <summary class="user-menu-trigger" aria-label="User menu">Owner</summary>
           <div class="user-menu-panel">
-            <p>Hackathon partner session</p>
+            <p>Signed in as owner</p>
             <a href="../">Back to OwnerRadar</a>
           </div>
         </details>
@@ -69,40 +65,30 @@
 
     <main class="app-shell">
       <section
-        class="network-banner"
-        data-network-banner
-        aria-label="Network health"
-      ></section>
-
-      <section
         class="executive-kpis"
         data-executive-kpis
         aria-label="Executive KPIs"
       ></section>
 
-      <div class="tile-toolbar" data-tile-toolbar>
-        <span class="tile-toolbar-label">Operations</span>
-        <div class="tile-toolbar-actions">
-          <button type="button" class="btn btn-ghost btn-sm" data-collapse-all>
-            Collapse all
-          </button>
-          <button type="button" class="btn btn-ghost btn-sm" data-expand-pinned>
-            Expand pinned
-          </button>
-        </div>
-      </div>
-
       <div class="tile-stack" data-tile-stack>
         <div data-tile-attention></div>
-        <div data-tile-orders></div>
         <div data-tile-locations></div>
-        <div data-tile-inventory></div>
-        <div data-tile-labor></div>
-        <div data-tile-phone></div>
-        <div data-tile-discounts></div>
-        <div data-tile-delivery></div>
-        <div data-tile-utilities></div>
-        <div data-tile-demo></div>
+        <div data-tile-orders></div>
+
+        <details class="more-ops" data-more-ops>
+          <summary class="more-ops-summary">
+            More operations
+            <span class="more-ops-hint">inventory · labor · phone · delivery · utilities</span>
+          </summary>
+          <div class="more-ops-body">
+            <div data-tile-inventory></div>
+            <div data-tile-labor></div>
+            <div data-tile-phone></div>
+            <div data-tile-discounts></div>
+            <div data-tile-delivery></div>
+            <div data-tile-utilities></div>
+          </div>
+        </details>
       </div>
     </main>
 

@@ -141,15 +141,6 @@ export function renderExecutiveKpis(el, state, { onMetric }) {
     return;
   }
   const { group, peerStats, storeAnalyses } = state.analysis;
-  const calls = state.stores.reduce(
-    (sum, s) => sum + (s.kpis.phoneCallsToday || 0),
-    0
-  );
-  const avgTicket =
-    group.orders > 0
-      ? state.stores.reduce((s, x) => s + (x.kpis.avgTicket || 0), 0) /
-        storeAnalyses.length
-      : peerStats.avgTicket?.mean || 0;
   const exposure = estimatedExposure(state.stores, state.analysis);
   const peerRev = peerStats.revenue?.mean
     ? peerStats.revenue.mean * group.storeCount
@@ -171,25 +162,6 @@ export function renderExecutiveKpis(el, state, { onMetric }) {
       label: "Orders today",
       value: formatKpi(group.orders, "number"),
       note: vsExpectedCopy(group.orders, peerOrd, "number", true),
-      status: "normal",
-    },
-    {
-      id: "avgTicket",
-      label: "Average ticket",
-      value: formatKpi(avgTicket, "currency"),
-      note: vsExpectedCopy(
-        avgTicket,
-        peerStats.avgTicket?.mean,
-        "currency",
-        true
-      ),
-      status: "normal",
-    },
-    {
-      id: "phone",
-      label: "Phone calls",
-      value: formatKpi(calls, "number"),
-      note: "Across the network today",
       status: "normal",
     },
     {
@@ -313,6 +285,7 @@ export function buildAttentionItems(state) {
 }
 
 export function renderAttentionTile(mount, state, prefs, handlers) {
+  if (!mount) return;
   const p = pref(prefs, "attention");
   const items = buildAttentionItems(state);
   const exposure = estimatedExposure(state.stores, state.analysis);
@@ -321,10 +294,7 @@ export function renderAttentionTile(mount, state, prefs, handlers) {
   const status =
     now.length > 0 ? "attention" : soon.length > 0 ? "watch" : "normal";
 
-  const groupHtml = (title, list, empty) => {
-    if (!list.length && empty) {
-      return `<div class="inbox-group"><h3>${title}</h3><p class="empty-line">${empty}</p></div>`;
-    }
+  const groupHtml = (title, list) => {
     if (!list.length) return "";
     return `
       <div class="inbox-group">
@@ -336,24 +306,12 @@ export function renderAttentionTile(mount, state, prefs, handlers) {
             <li class="inbox-item severity-${item.severity}">
               <div class="inbox-item-top">
                 <strong>${escapeHtml(item.title)}</strong>
-                <div class="inbox-item-tools">
-                  <details class="math-hint">
-                    <summary class="info-btn" aria-label="How we calculated this" title="How we calculated this">i</summary>
-                    <div class="math-hint-body">
-                      <p class="math-hint-label">How we spotted this</p>
-                      <p class="mono">${escapeHtml(item.tech)}</p>
-                    </div>
-                  </details>
-                  <span class="confidence">${escapeHtml(item.confidence)}</span>
-                </div>
+                <span class="confidence">${escapeHtml(item.confidence)}</span>
               </div>
               <p class="inbox-meta">${escapeHtml(item.storeName)} · ${timeLabel(item.detected)} · ${escapeHtml(String(item.impact))}</p>
               <p>${escapeHtml(item.why)}</p>
-              <p class="inbox-action"><span>What to do</span> ${escapeHtml(item.action)}</p>
               <div class="inbox-controls">
-                <button type="button" class="btn btn-ghost btn-sm" data-alert-evidence="${escapeHtml(item.key)}">View evidence</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-alert-dismiss="${escapeHtml(item.key)}">Dismiss</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-alert-snooze="${escapeHtml(item.key)}">Snooze</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-alert-evidence="${escapeHtml(item.key)}">Details</button>
                 <button type="button" class="btn btn-primary btn-sm" data-alert-resolve="${escapeHtml(item.key)}">Resolve</button>
               </div>
             </li>`
@@ -373,7 +331,6 @@ export function renderAttentionTile(mount, state, prefs, handlers) {
     bodyHtml = `
       ${groupHtml("Act now", now)}
       ${groupHtml("Review soon", soon)}
-      ${groupHtml("Informational", [], "Quiet notes show up here when the network is calm.")}
     `;
   }
 
@@ -393,14 +350,10 @@ export function renderAttentionTile(mount, state, prefs, handlers) {
     bodyHtml,
   });
 
-  mount.querySelectorAll("[data-alert-dismiss], [data-alert-snooze], [data-alert-resolve]").forEach((btn) => {
+  mount.querySelectorAll("[data-alert-resolve]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const key =
-        btn.getAttribute("data-alert-dismiss") ||
-        btn.getAttribute("data-alert-snooze") ||
-        btn.getAttribute("data-alert-resolve");
-      handlers.onDismiss(key);
+      handlers.onDismiss(btn.getAttribute("data-alert-resolve"));
     });
   });
   mount.querySelectorAll("[data-alert-evidence]").forEach((btn) => {
@@ -804,6 +757,7 @@ function opsListHtml(rows, formatValue) {
 }
 
 export function renderInventoryTile(mount, state, prefs, handlers) {
+  if (!mount) return;
   const p = pref(prefs, "inventory");
   const analyses = state.analysis?.storeAnalyses || [];
   const outliers = outlierStores(analyses, "inventoryDays", true);
@@ -860,6 +814,7 @@ export function renderInventoryTile(mount, state, prefs, handlers) {
 }
 
 export function renderLaborTile(mount, state, prefs, handlers) {
+  if (!mount) return;
   const p = pref(prefs, "labor");
   const analyses = state.analysis?.storeAnalyses || [];
   const outliers = outlierStores(analyses, "staffingFill", true);
@@ -910,6 +865,7 @@ export function renderLaborTile(mount, state, prefs, handlers) {
 }
 
 export function renderPhoneTile(mount, state, prefs, handlers) {
+  if (!mount) return;
   const p = pref(prefs, "phone");
   const calls = state.stores.reduce(
     (s, x) => s + (x.kpis.phoneCallsToday || 0),
@@ -963,6 +919,7 @@ export function renderPhoneTile(mount, state, prefs, handlers) {
 }
 
 export function renderDiscountsTile(mount, state, prefs, handlers) {
+  if (!mount) return;
   const p = pref(prefs, "discounts");
   const analyses = state.analysis?.storeAnalyses || [];
   const disc = outlierStores(analyses, "discountRate", false);
@@ -1018,6 +975,7 @@ export function renderDiscountsTile(mount, state, prefs, handlers) {
 }
 
 export function renderDeliveryTile(mount, state, prefs, handlers) {
+  if (!mount) return;
   const p = pref(prefs, "delivery");
   const analyses = state.analysis?.storeAnalyses || [];
   const outliers = outlierStores(analyses, "deliveryEta", false);
@@ -1065,6 +1023,7 @@ export function renderDeliveryTile(mount, state, prefs, handlers) {
 }
 
 export function renderUtilitiesTile(mount, state, prefs, handlers) {
+  if (!mount) return;
   const p = pref(prefs, "utilities");
   const water = state.stores.reduce(
     (s, x) => s + (x.kpis.waterGallonsToday || 0),

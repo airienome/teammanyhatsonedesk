@@ -3,8 +3,6 @@ import { createDemoController } from "./demo.js";
 import {
   loadTilePrefs,
   saveTilePrefs,
-  collapseAllPrefs,
-  expandPinnedPrefs,
   setTileExpanded,
   bindTileControls,
 } from "./ui/tiles.js";
@@ -15,7 +13,6 @@ import {
 } from "./ui/drawer.js";
 import {
   renderCommandStatus,
-  renderNetworkBanner,
   renderExecutiveKpis,
   renderAttentionTile,
   renderOrdersTile,
@@ -26,7 +23,6 @@ import {
   renderDiscountsTile,
   renderDeliveryTile,
   renderUtilitiesTile,
-  renderDemoTile,
   orderDrawerHtml,
   locationDrawerHtml,
   metricDrawerHtml,
@@ -77,7 +73,6 @@ const state = {
 const el = {
   asOf: document.querySelector("[data-as-of]"),
   status: document.querySelector("[data-network-status]"),
-  banner: document.querySelector("[data-network-banner]"),
   kpis: document.querySelector("[data-executive-kpis]"),
   tileStack: document.querySelector("[data-tile-stack]"),
   attention: document.querySelector("[data-tile-attention]"),
@@ -89,12 +84,8 @@ const el = {
   discounts: document.querySelector("[data-tile-discounts]"),
   delivery: document.querySelector("[data-tile-delivery]"),
   utilities: document.querySelector("[data-tile-utilities]"),
-  demo: document.querySelector("[data-tile-demo]"),
+  moreOps: document.querySelector("[data-more-ops]"),
   commandInput: document.querySelector("[data-command-input]"),
-  replayDemo: document.querySelector("[data-replay-demo]"),
-  pauseSim: document.querySelector("[data-pause-sim]"),
-  collapseAll: document.querySelector("[data-collapse-all]"),
-  expandPinned: document.querySelector("[data-expand-pinned]"),
   srLive: document.querySelector("[data-sr-live]"),
   drawer: {
     root: document.querySelector("[data-drawer-root]"),
@@ -146,7 +137,6 @@ function maybeEscalateFromLiveOrder() {
   state.selectedId = "miami-wynwood";
   state.orderFilter = "material";
   state.tilePrefs = setTileExpanded(state.tilePrefs, "attention", true);
-  state.tilePrefs = setTileExpanded(state.tilePrefs, "demo", true);
   saveTilePrefs(state.tilePrefs);
   demo.markEntered?.(miami.activeCase);
 }
@@ -340,27 +330,28 @@ function reviewAlerts() {
 }
 
 function renderAsOf() {
-  const simStart = state.sim?.startedAt
-    ? new Date(state.sim.startedAt).toLocaleString("en-US", {
-        timeZone: "America/New_York",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-    : "7:00 PM";
+  if (!el.asOf) return;
   if (state.error) {
-    el.asOf.textContent = `DB error: ${state.error}`;
+    el.asOf.textContent = `Offline · ${state.error}`;
     return;
   }
   el.asOf.textContent = state.asOf
-    ? `Sim from ${simStart} ET · ${new Date(state.asOf).toLocaleTimeString("en-US", { timeZone: "America/New_York" })}`
-    : "Connecting to Neon…";
+    ? `Updated ${new Date(state.asOf).toLocaleTimeString("en-US", {
+        timeZone: "America/New_York",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+      })} ET`
+    : "Connecting…";
+}
+
+function openMoreOps() {
+  if (el.moreOps) el.moreOps.open = true;
 }
 
 function render() {
   renderAsOf();
   renderCommandStatus(el.status, state);
-  renderNetworkBanner(el.banner, state, { onReviewAlerts: reviewAlerts });
   renderExecutiveKpis(el.kpis, state, {
     onMetric: (id) => {
       if (id === "attention") {
@@ -442,69 +433,15 @@ function render() {
   renderDeliveryTile(el.delivery, state, state.tilePrefs, storeHandlers);
   renderUtilitiesTile(el.utilities, state, state.tilePrefs, storeHandlers);
 
-  if (el.demo) {
-    renderDemoTile(el.demo, state, state.tilePrefs, demo, {
-      onReset: () => {
-        state.selectedId = null;
-        state.selectedOrderId = null;
-        state.orderFilter = "all";
-        state.orderStoreFilter = null;
-        demo.reset();
-        Promise.all([loadSnapshot(true), loadOrders()]).then(render);
-      },
-      onYes: () => demo.approveEnrichment(),
-    });
-  }
-
   if (tileCleanup) tileCleanup();
   tileCleanup = bindTileControls(el.tileStack, {
     prefs: state.tilePrefs,
     onChange: updateTilePrefs,
   });
-
-  // Refresh open drawer content if still open
-  const panel = el.drawer.root;
-  if (panel && !panel.hidden) {
-    const title = el.drawer.title?.textContent;
-    // keep drawer body in sync for live orders/locations
-  }
 }
 
 function bindChrome() {
   bindDrawerChrome(el.drawer, { onClose: () => {} });
-
-  el.replayDemo?.addEventListener("click", () => {
-    state.selectedId = null;
-    state.selectedOrderId = null;
-    state.orderFilter = "all";
-    state.orderStoreFilter = null;
-    demo.reset();
-    Promise.all([loadSnapshot(true), loadOrders()]).then(render);
-  });
-
-  el.pauseSim?.addEventListener("click", () => {
-    state.simPaused = !state.simPaused;
-    el.pauseSim.setAttribute("aria-pressed", String(state.simPaused));
-    el.pauseSim.textContent = state.simPaused
-      ? "Resume Simulation"
-      : "Pause Simulation";
-    if (state.simPaused) {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-    } else {
-      startPolling();
-    }
-  });
-
-  el.collapseAll?.addEventListener("click", () => {
-    updateTilePrefs(collapseAllPrefs(state.tilePrefs));
-  });
-
-  el.expandPinned?.addEventListener("click", () => {
-    updateTilePrefs(expandPinnedPrefs(state.tilePrefs));
-  });
 
   el.commandInput?.addEventListener("input", (e) => {
     clearTimeout(searchTimer);
@@ -535,6 +472,7 @@ function bindChrome() {
       const big = state.orders.rows.find((o) => (o.ticketCents || 0) >= 20000);
       if (big) openOrderDrawer(big.id);
     } else if (q.includes("discount")) {
+      openMoreOps();
       state.tilePrefs = setTileExpanded(state.tilePrefs, "discounts", true);
       state.tilePrefs = setTileExpanded(state.tilePrefs, "locations", true);
       saveTilePrefs(state.tilePrefs);
