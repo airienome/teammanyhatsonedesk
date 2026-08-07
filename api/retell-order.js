@@ -1,10 +1,13 @@
-import { insertCateringOrder } from "../lib/orders.mjs";
+import {
+  insertCateringOrder,
+  OWNER_CALL_QTY_THRESHOLD,
+} from "../lib/orders.mjs";
 import { fetchNetworkSnapshot } from "../lib/snapshot.mjs";
 import { ALERT_Z } from "../lib/spc.mjs";
 
 /**
  * Retell custom function + post-call webhook entry.
- * Escalation is SPC (≥2σ), not a fixed pizza count.
+ * Escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (100).
  */
 function parseBody(req) {
   if (!req.body) return {};
@@ -80,17 +83,21 @@ export default async function handler(req, res) {
     });
 
     const snapshot = await fetchNetworkSnapshot();
-    const spcNote = result.outOfControl
-      ? ` Out of control ≥${ALERT_Z}σ (${result.breachSummary}).`
-      : ` Within ${ALERT_Z}σ — owner not called.`;
+    const escalateNote = result.largeCatering
+      ? ` Large catering (qty > ${OWNER_CALL_QTY_THRESHOLD}) — owner alerted.`
+      : result.outOfControl
+        ? ` Out of control ≥${ALERT_Z}σ (${result.breachSummary}).`
+        : ` Within ${ALERT_Z}σ and qty ≤ ${OWNER_CALL_QTY_THRESHOLD} — owner not called.`;
 
     res.status(200).json({
       ok: true,
       status: "entered",
-      message: `Order entered: ${qty} pies ${when} to ${where}. Capacity util ${result.kpi.capacityUtil}%.${spcNote}`,
+      message: `Order entered: ${qty} pies ${when} to ${where}. Capacity util ${result.kpi.capacityUtil}%.${escalateNote}`,
       caseId: result.caseId,
       isMaterial: result.outOfControl,
       outOfControl: result.outOfControl,
+      largeCatering: result.largeCatering,
+      ownerCallQtyThreshold: OWNER_CALL_QTY_THRESHOLD,
       alertZ: ALERT_Z,
       breachSummary: result.breachSummary,
       ownerCall: result.ownerCall

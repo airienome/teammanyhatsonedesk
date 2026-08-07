@@ -153,6 +153,7 @@ export function shortHash(hash) {
 export function chainStatusLabel(chain) {
   if (!chain) return "";
   if (chain.status === "anchored") return "On-chain";
+  if (chain.status === "signed") return "Signed";
   if (chain.status === "pending") return "Chain pending";
   if (chain.status === "failed") return "Chain failed";
   return chain.status || "";

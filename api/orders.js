@@ -1,5 +1,6 @@
 import { getSql } from "../lib/snapshot.mjs";
 import { ALERT_Z } from "../lib/spc.mjs";
+import { OWNER_CALL_QTY_THRESHOLD } from "../lib/orders.mjs";
 import { serializeReceipt } from "../lib/chain.mjs";
 import { explorerTxUrl, getCluster } from "../lib/solana.mjs";
 
@@ -51,11 +52,13 @@ function chainFromRow(row) {
   });
 }
 
-function isOutOfControlItem(primary = {}) {
+function isOutOfControlItem(primary = {}, pizzaCount = 0) {
   return (
     primary.outOfControl === true ||
     primary.outOfControl === "true" ||
-    primary.spc?.outOfControl === true
+    primary.spc?.outOfControl === true ||
+    primary.largeCatering === true ||
+    pizzaCount > OWNER_CALL_QTY_THRESHOLD
   );
 }
 
@@ -64,7 +67,7 @@ function enrichOrder(row) {
   const primary = items[0] || {};
   const { when, where } = parseWhenWhere(primary);
   const pizzaCount = Number(row.pizza_count) || 0;
-  const outOfControl = isOutOfControlItem(primary);
+  const outOfControl = isOutOfControlItem(primary, pizzaCount);
   return {
     id: row.id,
     storeId: row.store_id,

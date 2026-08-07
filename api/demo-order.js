@@ -2,7 +2,7 @@ import { insertCateringOrder } from "../lib/orders.mjs";
 import { fetchNetworkSnapshot } from "../lib/snapshot.mjs";
 import { ALERT_Z } from "../lib/spc.mjs";
 
-/** Local/test helper — still SPC-escalated; qty must be provided. */
+/** Local/test helper — escalates on SPC ≥2σ or qty > 100; qty must be provided. */
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "no-store");

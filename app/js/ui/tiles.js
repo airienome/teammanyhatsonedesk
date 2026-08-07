@@ -2,12 +2,12 @@
  * Collapsible operational tile system + localStorage prefs.
  */
 
-const PREFS_KEY = "ownerradar.tiles.v3";
+const PREFS_KEY = "ownerradar.tiles.v4";
 
 const DEFAULT_PREFS = {
   attention: { expanded: true, pinned: true },
-  orders: { expanded: false, pinned: false },
-  locations: { expanded: false, pinned: false },
+  orders: { expanded: true, pinned: true },
+  locations: { expanded: true, pinned: true },
   inventory: { expanded: false, pinned: false },
   labor: { expanded: false, pinned: false },
   phone: { expanded: false, pinned: false },

@@ -141,6 +141,15 @@ export function renderExecutiveKpis(el, state, { onMetric }) {
     return;
   }
   const { group, peerStats, storeAnalyses } = state.analysis;
+  const calls = state.stores.reduce(
+    (sum, s) => sum + (s.kpis.phoneCallsToday || 0),
+    0
+  );
+  const avgTicket =
+    group.orders > 0
+      ? state.stores.reduce((s, x) => s + (x.kpis.avgTicket || 0), 0) /
+        storeAnalyses.length
+      : peerStats.avgTicket?.mean || 0;
   const exposure = estimatedExposure(state.stores, state.analysis);
   const peerRev = peerStats.revenue?.mean
     ? peerStats.revenue.mean * group.storeCount
@@ -162,6 +171,25 @@ export function renderExecutiveKpis(el, state, { onMetric }) {
       label: "Orders today",
       value: formatKpi(group.orders, "number"),
       note: vsExpectedCopy(group.orders, peerOrd, "number", true),
+      status: "normal",
+    },
+    {
+      id: "avgTicket",
+      label: "Average ticket",
+      value: formatKpi(avgTicket, "currency"),
+      note: vsExpectedCopy(
+        avgTicket,
+        peerStats.avgTicket?.mean,
+        "currency",
+        true
+      ),
+      status: "normal",
+    },
+    {
+      id: "phone",
+      label: "Phone calls",
+      value: formatKpi(calls, "number"),
+      note: "Across the network today",
       status: "normal",
     },
     {
@@ -369,6 +397,7 @@ export function renderAttentionTile(mount, state, prefs, handlers) {
 /* ─── Live orders ─── */
 
 export function renderOrdersTile(mount, state, prefs, handlers) {
+  if (!mount) return;
   const p = pref(prefs, "orders");
   const rows = state.orders.rows || [];
   const recent = recentOrdersWindow(rows, 5);
@@ -394,6 +423,33 @@ export function renderOrdersTile(mount, state, prefs, handlers) {
         `<option value="${s.id}" ${state.orderStoreFilter === s.id ? "selected" : ""}>${escapeHtml(s.name)}</option>`
     )
     .join("");
+
+  const storeNameById = Object.fromEntries(
+    (state.stores || []).map((s) => [s.id, s.name])
+  );
+  const feedEvents = (state.feed?.events || []).slice(0, 12);
+  const activityHtml = feedEvents.length
+    ? `<div class="activity-strip" aria-label="Recent store events">
+        <p class="activity-strip-label">Recent events</p>
+        <ul class="activity-list">
+          ${feedEvents
+            .map((ev) => {
+              const name =
+                storeNameById[ev.store_id] ||
+                ev.store_id ||
+                "Store";
+              const title = ev.title || ev.event_type || "Event";
+              const sev = ev.severity || "info";
+              return `<li class="activity-item severity-${escapeHtml(sev)}">
+                <span class="activity-time tabular">${timeShort(ev.occurred_at)}</span>
+                <span class="activity-store">${escapeHtml(name)}</span>
+                <span class="activity-title">${escapeHtml(title)}</span>
+              </li>`;
+            })
+            .join("")}
+        </ul>
+      </div>`
+    : "";
 
   const displayRows = rows.slice(0, 80);
   const paused = state.ordersPaused;
@@ -430,8 +486,13 @@ export function renderOrdersTile(mount, state, prefs, handlers) {
       <span>Today: <strong class="tabular">${formatKpi(state.orders.summary.orderCount, "number")}</strong> orders</span>
       <span><strong class="tabular">${money(state.orders.summary.revenueCents)}</strong> ticket revenue</span>
       <span class="${unusual ? "is-alert" : ""}"><strong class="tabular">${unusual}</strong> material</span>
-      <span><strong class="tabular">${formatKpi(state.orders.summary.chain?.anchored || 0, "number")}</strong> on Solana · ${formatKpi(state.orders.summary.chain?.pending || 0, "number")} pending</span>
+      <span><strong class="tabular">${formatKpi(
+        (state.orders.summary.chain?.anchored || 0) +
+          (state.orders.summary.chain?.signed || 0),
+        "number"
+      )}</strong> sealed · ${formatKpi(state.orders.summary.chain?.anchored || 0, "number")} on-chain · ${formatKpi(state.orders.summary.chain?.pending || 0, "number")} pending</span>
     </div>
+    ${activityHtml}
     <div class="order-feed" role="listbox" aria-label="Live orders">
       ${
         displayRows.length
@@ -461,7 +522,11 @@ export function renderOrdersTile(mount, state, prefs, handlers) {
                   <span class="order-tag ${o.isMaterial ? "alert" : ""}">${tag}</span>
                   ${
                     o.chain
-                      ? `<span class="order-tag chain ${o.chain.status === "anchored" ? "on-chain" : o.chain.status}">${chainStatusLabel(o.chain)}</span>`
+                      ? `<span class="order-tag chain ${
+                          o.chain.status === "anchored"
+                            ? "on-chain"
+                            : o.chain.status
+                        }">${chainStatusLabel(o.chain)}</span>`
                       : ""
                   }
                 </button>`;
@@ -474,7 +539,7 @@ export function renderOrdersTile(mount, state, prefs, handlers) {
 
   mount.innerHTML = tileShell({
     id: "orders",
-    title: "Live Orders",
+    title: "Live Orders & Events",
     status,
     live: !paused && state.live,
     headline: `${recent.length} in last 5 min`,
@@ -1088,16 +1153,16 @@ export function renderDemoTile(mount, state, prefs, demo, handlers) {
   const stageNote = {
     listening:
       "Call Mia at Joe's Miami Wynwood. When she hits the Order tool, the webhook lands here live.",
-    alert: "Material order in POS — Wynwood needs attention. Dialing your hackathon partner…",
-    owner_call: "OwnerRadar is on the line with the owner (your hackathon partner).",
+    alert: "SPC ≥2σ — Wynwood needs attention. Texting Pablo…",
+    owner_call: "OwnerRadar SMS sent — waiting for APPROVE / REVIEW / CALL.",
     enrich: "Looking up who's running the Wynwood dock event…",
-    found: "Found them — LinkedIn + public info texted to your partner.",
+    found: "Found them — LinkedIn + public info texted to Pablo.",
   }[stage];
 
   const stageLabel = {
     listening: "Listening for webhook",
     alert: "Alert · Wynwood",
-    owner_call: "Calling owner",
+    owner_call: "SMS → Pablo",
     enrich: "Enriching…",
     found: "Case closed loop",
   }[stage];
@@ -1129,7 +1194,7 @@ export function renderDemoTile(mount, state, prefs, demo, handlers) {
         }
       </section>
       <section class="demo-card ${stage === "owner_call" || stage === "enrich" || stage === "found" ? "is-hot" : ""}">
-        <h3>2 · OwnerRadar → owner (partner)</h3>
+        <h3>2 · OwnerRadar → Pablo</h3>
         <ol class="transcript">
           ${
             ownerLines.length
@@ -1144,7 +1209,8 @@ export function renderDemoTile(mount, state, prefs, demo, handlers) {
         </ol>
         ${
           stage === "owner_call"
-            ? `<button type="button" class="btn btn-primary" data-demo-yes>Partner: Yes — find who's in charge</button>`
+            ? `<button type="button" class="btn btn-primary" data-demo-yes>Simulate Pablo: APPROVE</button>
+               <p class="metric-note">Live path: reply APPROVE / REVIEW / CALL to the Twilio SMS.</p>`
             : ""
         }
         ${stage === "enrich" ? `<p class="searching">Searching public event + people graph…</p>` : ""}
@@ -1171,8 +1237,8 @@ export function renderDemoTile(mount, state, prefs, demo, handlers) {
           <pre>${CASHIER_AGENT_PROMPT.replace(/</g, "&lt;")}</pre>
         </div>
         <div>
-          <h4>OwnerRadar → partner (outbound)</h4>
-          <p class="agent-meta">Call Owner tool → <code>/api/call-owner</code> · dials OWNER_PHONE</p>
+          <h4>OwnerRadar → Pablo (outbound)</h4>
+          <p class="agent-meta">CallOwner → <code>/api/call-owner</code> · TextOwner → <code>/api/text-owner</code> (Twilio SMS)</p>
           <pre>${OWNER_RADAR_AGENT_PROMPT.replace(/</g, "&lt;")}</pre>
         </div>
       </div>

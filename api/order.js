@@ -1,4 +1,7 @@
-import { insertCateringOrder } from "../lib/orders.mjs";
+import {
+  insertCateringOrder,
+  OWNER_CALL_QTY_THRESHOLD,
+} from "../lib/orders.mjs";
 import { fetchNetworkSnapshot } from "../lib/snapshot.mjs";
 import { ALERT_Z } from "../lib/spc.mjs";
 
@@ -13,7 +16,7 @@ import { ALERT_Z } from "../lib/spc.mjs";
  *   "item": "cheese pies"
  * }
  *
- * Owner escalation is SPC-based (≥2σ), not a fixed pizza count.
+ * Owner escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (100).
  */
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -58,9 +61,19 @@ export default async function handler(req, res) {
     });
 
     const snapshot = await fetchNetworkSnapshot();
-    const spcNote = result.outOfControl
-      ? ` Out of statistical control (≥${ALERT_Z}σ): ${result.breachSummary}. Owner alert ${result.ownerCall?.dialed?.length ? "dialed" : "queued/skipped"}.`
-      : ` KPIs remain within ${ALERT_Z}σ — owner not called.`;
+    const dialed = result.ownerCall?.dialed?.length || 0;
+    let escalateNote;
+    if (result.largeCatering) {
+      escalateNote = ` Large catering (qty > ${OWNER_CALL_QTY_THRESHOLD}): owner alert ${dialed ? "dialed" : "queued/skipped"}.${
+        result.spcOutOfControl
+          ? ` Also ≥${ALERT_Z}σ: ${result.breachSummary}.`
+          : ""
+      }`;
+    } else if (result.outOfControl) {
+      escalateNote = ` Out of statistical control (≥${ALERT_Z}σ): ${result.breachSummary}. Owner alert ${dialed ? "dialed" : "queued/skipped"}.`;
+    } else {
+      escalateNote = ` KPIs within ${ALERT_Z}σ and qty ≤ ${OWNER_CALL_QTY_THRESHOLD} — owner not called.`;
+    }
 
     res.status(200).json({
       ok: true,
@@ -68,10 +81,12 @@ export default async function handler(req, res) {
         (result.fulfillment?.needsHelp
           ? `Order entered at Miami Wynwood: ${qty} ${item} ${when} to ${where}. Miami Beach helping with ${result.fulfillment.helpShare} pies.`
           : `Order entered at Miami Wynwood: ${qty} ${item} ${when} to ${where}.`) +
-        spcNote,
+        escalateNote,
       caseId: result.caseId,
       isMaterial: result.outOfControl,
       outOfControl: result.outOfControl,
+      largeCatering: result.largeCatering,
+      ownerCallQtyThreshold: OWNER_CALL_QTY_THRESHOLD,
       alertZ: ALERT_Z,
       breachSummary: result.breachSummary,
       spcFlags: result.spcFlags,

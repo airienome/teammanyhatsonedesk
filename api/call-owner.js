@@ -67,9 +67,16 @@ export default async function handler(req, res) {
     });
 
     if (!result.dialed.length) {
+      const skipReason = result.skipped[0]?.reason || "in_statistical_control";
+      const status =
+        skipReason === "cooldown"
+          ? "cooldown"
+          : skipReason === "in_statistical_control"
+            ? "in_control"
+            : "skipped";
       res.status(200).json({
         ok: true,
-        status: "in_control",
+        status,
         alertZ: ALERT_Z,
         message:
           result.skipped[0]?.message ||

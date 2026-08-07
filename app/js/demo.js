@@ -8,12 +8,12 @@ import {
 /** Live webhook path — escalate when a shop looks unusually off, not a fixed pizza count. */
 const OWNER_LINES = [
   {
-    who: "OwnerRadar → Owner (partner)",
-    text: "Hey — one of your Joe's shops looks off versus the rest of the network. We can supply through the other locations, but you should know.",
+    who: "OwnerRadar → Pablo (SMS)",
+    text: "Hey Pablo — one of your Joe's shops looks off versus the rest of the network. We can supply through the other locations, but you should know.",
   },
   {
-    who: "OwnerRadar → Owner (partner)",
-    text: "Want me to find who's driving the demand spike? There might be more catering in it — I can look up who's in charge and text you their LinkedIn and public info.",
+    who: "OwnerRadar → Pablo (SMS)",
+    text: "Reply APPROVE to coordinate, REVIEW for detail, or CALL to talk.",
   },
 ];
 
@@ -60,8 +60,8 @@ export function createDemoController({ onStage, render }) {
         liveCase.breachSummary || "something unusual versus other shops or this week's usual";
       return [
         {
-          who: "OwnerRadar → Owner (partner)",
-          text: `Hey — ${liveCase.storeName || "a Joe's store"} needs a look (${spcBit}). Related order: ${qtyBit} for ${whereBit}. We can supply through the network, but you should know.`,
+          who: "OwnerRadar → Pablo (SMS)",
+          text: `Hey Pablo — ${liveCase.storeName || "a Joe's store"} needs a look (${spcBit}). Related order: ${qtyBit} for ${whereBit}. Reply APPROVE / REVIEW / CALL.`,
         },
         OWNER_LINES[1],
       ];
@@ -83,11 +83,39 @@ export function createDemoController({ onStage, render }) {
     timer = setTimeout(() => setStage("owner_call"), 1400);
   }
 
-  function approveEnrichment() {
+  async function approveEnrichment() {
     if (stage !== "owner_call" && stage !== "enrich") return;
     setStage("enrich");
     clearTimer();
-    timer = setTimeout(() => setStage("found"), 1400);
+    try {
+      // Simulate owner replying APPROVE to the SPC SMS
+      await fetch("/api/sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reply",
+          body: "APPROVE",
+          from: undefined,
+        }),
+      });
+    } catch (err) {
+      console.warn("approve sms failed", err);
+    }
+    try {
+      await fetch("/api/text-owner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: EVENT_ORGANIZER.name,
+          role: EVENT_ORGANIZER.role,
+          linkedin: EVENT_ORGANIZER.linkedin,
+          notes: EVENT_ORGANIZER.publicNotes,
+        }),
+      });
+    } catch (err) {
+      console.warn("text-owner failed", err);
+    }
+    timer = setTimeout(() => setStage("found"), 900);
   }
 
   function reset() {
