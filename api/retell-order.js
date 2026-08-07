@@ -7,7 +7,7 @@ import { ALERT_Z } from "../lib/spc.mjs";
 
 /**
  * Retell custom function + post-call webhook entry.
- * Escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (100).
+ * Escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (10).
  */
 function parseBody(req) {
   if (!req.body) return {};

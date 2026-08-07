@@ -16,7 +16,7 @@ import { ALERT_Z } from "../lib/spc.mjs";
  *   "item": "cheese pies"
  * }
  *
- * Owner escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (100).
+ * Owner escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (10).
  */
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");

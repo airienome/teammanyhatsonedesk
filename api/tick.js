@@ -1,6 +1,6 @@
 import { simulateTick } from "../scripts/simulate.mjs";
 import { fetchNetworkSnapshot } from "../lib/snapshot.mjs";
-import { dialOwnerForOutOfControl } from "../lib/call-owner.mjs";
+import { ownerCallsEnabled } from "../lib/call-owner.mjs";
 
 export const config = {
   maxDuration: 60,
@@ -27,35 +27,21 @@ export default async function handler(req, res) {
       req.method === "POST" ||
       req.query?.snapshot === "1" ||
       req.query?.snapshot === "true";
-    const snapshot = await fetchNetworkSnapshot();
+    const snapshot = wantSnapshot ? await fetchNetworkSnapshot() : null;
 
-    // Proactive OwnerRadar dial when any shop goes ≥2σ (cooldown per store).
-    let ownerCall = null;
-    try {
-      ownerCall = await dialOwnerForOutOfControl({
-        snapshot,
-        reason: "spc_tick_watch",
-      });
-    } catch (err) {
-      console.warn("[tick] owner dial failed:", err?.message || err);
-      ownerCall = { ok: false, error: err.message, code: err.code };
-    }
-
+    // Owner voice dials removed from cron — re-enable via OWNER_CALLS_ENABLED=true
+    // and wire dialOwnerForOutOfControl back if needed.
     res.status(200).json({
       ok: true,
       summary,
       chain: result?.chain || null,
-      snapshot: wantSnapshot ? snapshot : null,
+      snapshot,
       ownerCall: {
-        dialed: ownerCall?.dialed?.length || 0,
-        skipped: ownerCall?.skipped?.length || 0,
-        stores: (ownerCall?.dialed || []).map((d) => ({
-          storeId: d.storeId,
-          storeName: d.storeName,
-          callId: d.callId,
-          breachSummary: d.breachSummary,
-        })),
-        error: ownerCall?.error || null,
+        dialed: 0,
+        skipped: 0,
+        enabled: ownerCallsEnabled(),
+        stores: [],
+        error: null,
       },
       tickedAt: new Date().toISOString(),
     });
