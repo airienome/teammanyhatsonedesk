@@ -1,27 +1,30 @@
 import {
-  CASHIER_AGENT_PROMPT,
   DEMO_ORDER,
+  DIGEST_ITEMS,
   EVENT_ORGANIZER,
   OWNER_RADAR_AGENT_PROMPT,
 } from "../data/stores.js";
 
-/** Live webhook path — escalate when a shop looks unusually off, not a fixed pizza count. */
-const OWNER_LINES = [
+const URGENT_LINES = [
   {
-    who: "OwnerRadar → Pablo (SMS)",
-    text: "Hey Pablo — one of your Joe's shops looks off versus the rest of the network. We can supply through the other locations, but you should know.",
+    who: "Signal · Plant The Future",
+    text: "24 moss wall panels · ASAP · 1 Hotel South Beach lobby · ~$18k",
   },
   {
-    who: "OwnerRadar → Pablo (SMS)",
-    text: "Reply APPROVE to coordinate, REVIEW for detail, or CALL to talk.",
+    who: "Floor (not escalated)",
+    text: "Both install vans out · no float drivers · team hoped to 'figure it out' rather than call Yair",
+  },
+  {
+    who: "OwnerRadar",
+    text: "Silent failure detected — material ASAP commit with no delivery capacity. Escalating to Yair.",
   },
 ];
 
 export function createDemoController({ onStage, render }) {
-  let stage = "listening";
+  let stage = "idle";
   let timer = null;
   let liveCase = null;
-  let listenSince = Date.now();
+  let mode = null; // "urgent" | "digest"
 
   function clearTimer() {
     if (timer) {
@@ -36,48 +39,77 @@ export function createDemoController({ onStage, render }) {
     render?.();
   }
 
-  function transcript() {
-    // Cashier side is a real phone call — UI only mirrors webhook result.
-    if (!liveCase) return [];
-    return [
-      {
-        who: "Webhook · Order tool",
-        text: `${liveCase.qty || DEMO_ORDER.qty} ${liveCase.item || "pies"} · ${liveCase.when || "ASAP"} · ${liveCase.where || DEMO_ORDER.where}`,
-      },
-      {
-        who: "POS",
-        text: `Case ${liveCase.caseId || DEMO_ORDER.caseId} written · KPIs recomputed · Wynwood flagged`,
-      },
-    ];
+  function signalTranscript() {
+    if (mode !== "urgent" || stage === "idle") return [];
+    return URGENT_LINES;
   }
 
   function ownerTranscript() {
-    if (stage === "owner_call" || stage === "enrich" || stage === "found") {
-      if (!liveCase?.breachSummary && !liveCase?.qty) return OWNER_LINES;
-      const qtyBit = liveCase.qty ? `${liveCase.qty} pies` : "a demand spike";
-      const whereBit = liveCase.where || "the venue";
-      const spcBit =
-        liveCase.breachSummary || "something unusual versus other shops or this week's usual";
+    if (mode === "digest" && (stage === "digest" || stage === "found")) {
+      return DIGEST_ITEMS.map((item) => ({
+        who: item.source,
+        text: item.text,
+      }));
+    }
+    if (
+      mode === "urgent" &&
+      (stage === "owner_call" || stage === "enrich" || stage === "found")
+    ) {
+      const qty = liveCase?.qty || DEMO_ORDER.qty;
+      const where = liveCase?.where || DEMO_ORDER.where;
       return [
         {
-          who: "OwnerRadar → Pablo (SMS)",
-          text: `Hey Pablo — ${liveCase.storeName || "a Joe's store"} needs a look (${spcBit}). Related order: ${qtyBit} for ${whereBit}. Reply APPROVE / REVIEW / CALL.`,
+          who: "OwnerRadar → Yair",
+          text: `Hey Yair — Plant The Future just took a ${qty}-panel ASAP install for ${where}. No drivers available and the floor didn't call you. Want options, or should I look up who's driving the project?`,
         },
-        OWNER_LINES[1],
+        {
+          who: "OwnerRadar → Yair",
+          text: "Reply APPROVE to coordinate / enrich, REVIEW for detail, or CALL to talk.",
+        },
       ];
     }
     return [];
   }
 
-  /** Fired when a fresh material order lands via /api/order or /api/retell-order. */
+  function playDigest() {
+    clearTimer();
+    mode = "digest";
+    liveCase = null;
+    setStage("digest");
+  }
+
+  async function playUrgent() {
+    clearTimer();
+    mode = "urgent";
+    liveCase = {
+      ...DEMO_ORDER,
+      storeName: "Plant The Future",
+      breachSummary: "ASAP commission with no install drivers — not escalated by staff",
+      eventAt: new Date().toISOString(),
+    };
+    setStage("alert");
+    try {
+      await fetch("/api/demo-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          qty: DEMO_ORDER.qty,
+          when: DEMO_ORDER.when,
+          where: DEMO_ORDER.where,
+          item: DEMO_ORDER.item,
+        }),
+      });
+    } catch (err) {
+      console.warn("demo-order failed", err);
+    }
+    timer = setTimeout(() => setStage("owner_call"), 1600);
+  }
+
+  /** Still used if a live material case appears from the API. */
   function markEntered(activeCase = null) {
     if (activeCase) liveCase = activeCase;
-    if (stage !== "listening") return;
-    const eventAt = activeCase?.eventAt
-      ? new Date(activeCase.eventAt).getTime()
-      : Date.now();
-    // Ignore cases that already existed before we started / reset listening
-    if (eventAt < listenSince - 5_000) return;
+    if (stage !== "idle" && stage !== "listening") return;
+    mode = "urgent";
     clearTimer();
     setStage("alert");
     timer = setTimeout(() => setStage("owner_call"), 1400);
@@ -88,15 +120,10 @@ export function createDemoController({ onStage, render }) {
     setStage("enrich");
     clearTimer();
     try {
-      // Simulate owner replying APPROVE to the SPC SMS
       await fetch("/api/sms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "reply",
-          body: "APPROVE",
-          from: undefined,
-        }),
+        body: JSON.stringify({ action: "reply", body: "APPROVE" }),
       });
     } catch (err) {
       console.warn("approve sms failed", err);
@@ -121,26 +148,30 @@ export function createDemoController({ onStage, render }) {
   function reset() {
     clearTimer();
     liveCase = null;
-    listenSince = Date.now();
-    setStage("listening");
+    mode = null;
+    setStage("idle");
   }
 
   return {
     get stage() {
       return stage;
     },
+    get mode() {
+      return mode;
+    },
     get liveCase() {
       return liveCase;
     },
-    transcript,
+    transcript: signalTranscript,
     ownerTranscript,
+    playDigest,
+    playUrgent,
     approveEnrichment,
     markEntered,
     reset,
-    OWNER_LINES,
     DEMO_ORDER,
+    DIGEST_ITEMS,
     EVENT_ORGANIZER,
-    CASHIER_AGENT_PROMPT,
     OWNER_RADAR_AGENT_PROMPT,
   };
 }

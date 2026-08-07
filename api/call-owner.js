@@ -9,7 +9,7 @@ import { ALERT_Z } from "../lib/spc.mjs";
  *
  * Body (all optional):
  * {
- *   "storeId": "miami-wynwood",  // limit to one store; else all OOC stores
+ *   "storeId": "plant-the-future",  // limit to one store; else all OOC stores
  *   "force": false,              // bypass cooldown only (still requires ≥2σ)
  *   "to": "+1XXXXXXXXXX"         // override OWNER_PHONE
  * }

@@ -26,8 +26,8 @@ export default async function handler(req, res) {
     const result = await insertCateringOrder({
       qty: Number(body.qty),
       when: body.when || "ASAP",
-      where: body.where || "the dock, Wynwood",
-      item: body.item || "cheese pies",
+      where: body.where || "1 Hotel South Beach lobby",
+      item: body.item || "moss wall panels",
       channel: body.channel || "phone",
       caseId: body.caseId || null,
       callerLabel: body.callerLabel || "hackathon_judge",

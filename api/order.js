@@ -6,17 +6,17 @@ import { fetchNetworkSnapshot } from "../lib/snapshot.mjs";
 import { ALERT_Z } from "../lib/spc.mjs";
 
 /**
- * ElevenLabs webhook tool endpoint for Mia (Joe's cashier).
+ * ElevenLabs webhook tool endpoint for Sofia (Plant The Future gallery).
  *
  * Body — qty is required from the agent (whatever the caller ordered):
  * {
  *   "qty": <integer from conversation>,
  *   "when": "ASAP",
- *   "where": "the dock, Wynwood",
- *   "item": "cheese pies"
+ *   "where": "1 Hotel South Beach lobby",
+ *   "item": "moss wall panels"
  * }
  *
- * Owner escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (10).
+ * Owner escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (8).
  */
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -40,15 +40,17 @@ export default async function handler(req, res) {
     const qtyRaw = body.qty ?? body.quantity ?? body.pizza_count;
     if (qtyRaw == null || Number.isNaN(Number(qtyRaw))) {
       res.status(400).json({
-        error: "qty is required — pass the pizza count from the conversation",
+        error: "qty is required — pass the panel/piece count from the conversation",
       });
       return;
     }
 
     const qty = Math.max(1, Number(qtyRaw));
     const when = String(body.when ?? body.needed_by ?? "ASAP");
-    const where = String(body.where ?? body.delivery_location ?? "the dock, Wynwood");
-    const item = String(body.item ?? body.pizza_type ?? "cheese pies");
+    const where = String(
+      body.where ?? body.delivery_location ?? "1 Hotel South Beach lobby"
+    );
+    const item = String(body.item ?? body.pizza_type ?? "moss wall panels");
 
     const result = await insertCateringOrder({
       qty,
@@ -56,7 +58,7 @@ export default async function handler(req, res) {
       where,
       item,
       channel: "phone",
-      callerLabel: body.callerLabel || "elevenlabs_mia",
+      callerLabel: body.callerLabel || "elevenlabs_sofia",
       note: `${qty} ${item} · ${when} · ${where}`,
     });
 
@@ -64,7 +66,7 @@ export default async function handler(req, res) {
     const dialed = result.ownerCall?.dialed?.length || 0;
     let escalateNote;
     if (result.largeCatering) {
-      escalateNote = ` Large catering (qty > ${OWNER_CALL_QTY_THRESHOLD}): owner alert ${dialed ? "dialed" : "queued/skipped"}.${
+      escalateNote = ` Large commission (qty > ${OWNER_CALL_QTY_THRESHOLD}): owner alert ${dialed ? "dialed" : "queued/skipped"}.${
         result.spcOutOfControl
           ? ` Also ≥${ALERT_Z}σ: ${result.breachSummary}.`
           : ""
@@ -79,8 +81,8 @@ export default async function handler(req, res) {
       ok: true,
       message:
         (result.fulfillment?.needsHelp
-          ? `Order entered at Miami Wynwood: ${qty} ${item} ${when} to ${where}. Miami Beach helping with ${result.fulfillment.helpShare} pies.`
-          : `Order entered at Miami Wynwood: ${qty} ${item} ${when} to ${where}.`) +
+          ? `Order entered at Plant The Future: ${qty} ${item} ${when} to ${where}. Pollinator helping with ${result.fulfillment.helpShare} panels.`
+          : `Order entered at Plant The Future: ${qty} ${item} ${when} to ${where}.`) +
         escalateNote,
       caseId: result.caseId,
       isMaterial: result.outOfControl,

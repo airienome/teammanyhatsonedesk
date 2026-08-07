@@ -24,8 +24,8 @@ import {
 } from "./format.js";
 import {
   DEMO_ORDER,
+  DIGEST_ITEMS,
   EVENT_ORGANIZER,
-  CASHIER_AGENT_PROMPT,
   OWNER_RADAR_AGENT_PROMPT,
 } from "../../data/stores.js";
 
@@ -44,15 +44,15 @@ function networkNarrative(analysis, stores) {
   const alerts = group.openRisks || 0;
   const watch = watchCount(analysis);
   if (!alerts && !watch) {
-    return "All locations look normal right now.";
+    return "All businesses look normal right now.";
   }
   const parts = [];
-  const miami = stores?.find((s) => s.id === "miami-wynwood");
+  const miami = stores?.find((s) => s.id === "plant-the-future");
   const miamiA = analysis.storeAnalyses.find(
-    (a) => a.store.id === "miami-wynwood"
+    (a) => a.store.id === "plant-the-future"
   );
   if (miami?.activeCase && miamiA?.status === "alert") {
-    parts.push("one big catering order");
+    parts.push("one rush mural commission");
   }
   const inv = analysis.suggestions.find((s) => s.kpi === "inventoryDays");
   if (inv) parts.push("one inventory risk");
@@ -64,8 +64,8 @@ function networkNarrative(analysis, stores) {
   }
   const lead =
     alerts === 1
-      ? "1 location needs attention"
-      : `${alerts} locations need attention`;
+      ? "1 business needs attention"
+      : `${alerts} businesses need attention`;
   const detail = parts.length
     ? parts.slice(0, 3).join(", ").replace(/, ([^,]*)$/, ", and $1")
     : `${watch} on watch`;
@@ -232,9 +232,9 @@ function isDismissed(state, key) {
 
 export function buildAttentionItems(state) {
   const items = [];
-  const miami = state.stores.find((s) => s.id === "miami-wynwood");
+  const miami = state.stores.find((s) => s.id === "plant-the-future");
   const miamiAnalysis = state.analysis?.storeAnalyses.find(
-    (a) => a.store.id === "miami-wynwood"
+    (a) => a.store.id === "plant-the-future"
   );
   const materialCase =
     miami?.activeCase && miamiAnalysis?.status === "alert"
@@ -246,7 +246,7 @@ export function buildAttentionItems(state) {
     if (!isDismissed(state, key)) {
       const mathBits = [
         materialCase.caseId || DEMO_ORDER.caseId,
-        materialCase.qty ? `${materialCase.qty} pies` : null,
+        materialCase.qty ? `${materialCase.qty} panels` : null,
         materialCase.breachSummary || materialCase.spc?.breachSummary || null,
       ].filter(Boolean);
       items.push({
@@ -353,7 +353,7 @@ export function renderAttentionTile(mount, state, prefs, handlers) {
   if (!items.length) {
     bodyHtml = `
       <div class="empty-attention">
-        <p>Nothing unusual right now${state.selectedId ? " at this location" : ""}. We'll flag anything that looks off versus other shops or this week's usual.</p>
+        <p>Nothing unusual right now${state.selectedId ? " at this business" : ""}. We'll flag anything that looks off versus other businesses or this week's usual.</p>
       </div>`;
   } else {
     bodyHtml = `
@@ -467,7 +467,7 @@ export function renderOrdersTile(mount, state, prefs, handlers) {
       <label class="filter-field">
         <span class="sr-only">Location</span>
         <select data-order-store>
-          <option value="">All locations</option>
+          <option value="">All businesses</option>
           ${storeOptions}
         </select>
       </label>
@@ -579,7 +579,7 @@ export function renderOrdersTile(mount, state, prefs, handlers) {
   });
 }
 
-/* ─── Locations ─── */
+/* ─── Businesses ─── */
 
 function sortAnalyses(list, sortKey) {
   const rank = { alert: 0, watch: 1, ok: 2 };
@@ -655,7 +655,7 @@ export function renderLocationsTile(mount, state, prefs, handlers) {
       const { store, flags, status: st } = analysis;
       const selected = state.selectedId === store.id ? "is-selected" : "";
       const pulse =
-        store.id === "miami-wynwood" && st === "alert" && store.activeCase
+        store.id === "plant-the-future" && st === "alert" && store.activeCase
           ? "is-pulsing"
           : "";
       return `
@@ -737,22 +737,22 @@ export function renderLocationsTile(mount, state, prefs, handlers) {
         <option value="exceptions" ${state.locationSort === "exceptions" ? "selected" : ""}>Sort: exceptions</option>
       </select>
       <label class="filter-field grow">
-        <span class="sr-only">Search locations</span>
-        <input type="search" data-loc-search placeholder="Search locations…" value="${escapeHtml(state.locationSearch || "")}" />
+        <span class="sr-only">Search businesses</span>
+        <input type="search" data-loc-search placeholder="Search businesses…" value="${escapeHtml(state.locationSearch || "")}" />
       </label>
     </div>
-    ${view === "table" ? tableHtml : `<div class="loc-grid">${cardsHtml || `<p class="detail-placeholder">No locations match.</p>`}</div>`}
+    ${view === "table" ? tableHtml : `<div class="loc-grid">${cardsHtml || `<p class="detail-placeholder">No businesses match.</p>`}</div>`}
   `;
 
   mount.innerHTML = tileShell({
     id: "locations",
-    title: "Locations",
+    title: "Businesses",
     status,
     headline: `${okN} normal · ${alertN} attention · ${watchN} watch`,
     secondaryMetric: `${analyses.length} stores`,
     summary: alertN
-      ? `${alertN} location${alertN === 1 ? "" : "s"} need owner review`
-      : "Network locations within policy",
+      ? `${alertN} business${alertN === 1 ? "" : "s"} need owner review`
+      : "Portfolio businesses within policy",
     alertCount: alertN,
     expanded: p.expanded,
     pinned: p.pinned,
@@ -829,8 +829,10 @@ export function renderInventoryTile(mount, state, prefs, handlers) {
   const worst = [...analyses].sort(
     (a, b) => (a.store.kpis.inventoryDays || 0) - (b.store.kpis.inventoryDays || 0)
   )[0];
-  const lowDough = state.stores.filter((s) => (s.inventory?.dough || 0) < 40);
-  const alertCount = outliers.length + (lowDough.length ? 1 : 0);
+  const lowMoss = state.stores.filter(
+    (s) => (s.inventory?.preserved_moss || 0) < 80
+  );
+  const alertCount = outliers.length + (lowMoss.length ? 1 : 0);
   const status = outliers.some((o) => o.status === "alert")
     ? "attention"
     : alertCount
@@ -842,15 +844,15 @@ export function renderInventoryTile(mount, state, prefs, handlers) {
       id: a.store.id,
       name: a.store.name,
       days: a.store.kpis.inventoryDays,
-      dough: a.store.inventory?.dough,
+      moss: a.store.inventory?.preserved_moss,
       note: locationDiagnostic(a),
     }))
     .sort((a, b) => a.days - b.days)
     .slice(0, 8);
 
   const bodyHtml = `
-    <p class="tile-lead">Inventory cover and dough balances across the network.</p>
-    ${opsListHtml(rows, (r) => `${formatKpi(r.days, "days")} · dough ${(r.dough ?? 0).toFixed(0)} lbs`)}
+    <p class="tile-lead">Moss cover and material balances across the studio.</p>
+    ${opsListHtml(rows, (r) => `${formatKpi(r.days, "days")} · moss ${(r.moss ?? 0).toFixed(0)} sqft`)}
   `;
 
   mount.innerHTML = tileShell({
@@ -860,7 +862,7 @@ export function renderInventoryTile(mount, state, prefs, handlers) {
     headline: worst
       ? `Lowest cover ${formatKpi(worst.store.kpis.inventoryDays, "days")} · ${worst.store.name}`
       : "—",
-    secondaryMetric: `${lowDough.length} low dough`,
+    secondaryMetric: `${lowMoss.length} low moss`,
     summary:
       outliers.length > 0
         ? `${outliers.length} location${outliers.length === 1 ? "" : "s"} below expected cover`
@@ -911,7 +913,7 @@ export function renderLaborTile(mount, state, prefs, handlers) {
     secondaryMetric: `${outliers.length} staffing flags`,
     summary:
       outliers.length > 0
-        ? "Some locations below staffing fill targets"
+        ? "Some businesses below staffing fill targets"
         : "Staffing within expected fill",
     alertCount: outliers.length,
     expanded: p.expanded,
@@ -1064,14 +1066,14 @@ export function renderDeliveryTile(mount, state, prefs, handlers) {
 
   mount.innerHTML = tileShell({
     id: "delivery",
-    title: "Delivery Performance",
+    title: "Install / lead time",
     status,
-    headline: `Avg ETA ${formatKpi(avg, "minutes")}`,
-    secondaryMetric: `${outliers.length} slow stores`,
+    headline: `Avg lead ${formatKpi(avg, "minutes")}`,
+    secondaryMetric: `${outliers.length} elevated`,
     summary:
       outliers.length > 0
-        ? "Delivery times elevated vs peers or history"
-        : "ETAs within expected range",
+        ? "Lead times elevated vs peers or history"
+        : "Lead times within expected range",
     alertCount: outliers.length,
     expanded: p.expanded,
     pinned: p.pinned,
@@ -1094,7 +1096,7 @@ export function renderUtilitiesTile(mount, state, prefs, handlers) {
     (s, x) => s + (x.kpis.waterGallonsToday || 0),
     0
   );
-  const dough = state.stores.reduce(
+  const moss = state.stores.reduce(
     (s, x) => s + (x.kpis.doughLbsToday || 0),
     0
   );
@@ -1104,23 +1106,23 @@ export function renderUtilitiesTile(mount, state, prefs, handlers) {
       id: s.id,
       name: s.name,
       water: s.kpis.waterGallonsToday || 0,
-      dough: s.kpis.doughLbsToday || 0,
+      moss: s.kpis.doughLbsToday || 0,
     }))
     .sort((a, b) => b.water - a.water);
 
   mount.innerHTML = tileShell({
     id: "utilities",
-    title: "Water and Utility Usage",
+    title: "Studio utilities",
     status: "normal",
-    headline: `${water.toFixed(0)} gal water`,
-    secondaryMetric: `${dough.toFixed(0)} lbs dough produced`,
-    summary: "Utility and production counters for the dinner sim window",
+    headline: `${moss.toFixed(0)} sqft material processed`,
+    secondaryMetric: `${water.toFixed(0)} gal water`,
+    summary: "Utility and production counters across the portfolio today",
     alertCount: 0,
     expanded: p.expanded,
     pinned: p.pinned,
     bodyHtml: opsListHtml(
       rows.slice(0, 8),
-      (r) => `${r.water.toFixed(0)} gal · ${r.dough.toFixed(0)} lbs dough`
+      (r) => `${r.moss.toFixed(0)} sqft · ${r.water.toFixed(0)} gal`
     ),
   });
   mount.querySelectorAll("[data-store-id]").forEach((btn) => {
@@ -1136,47 +1138,58 @@ export function renderUtilitiesTile(mount, state, prefs, handlers) {
 export function renderDemoTile(mount, state, prefs, demo, handlers) {
   const p = pref(prefs, "demo");
   const stage = demo.stage;
+  const mode = demo.mode;
   const lines = demo.transcript();
   const ownerLines = demo.ownerTranscript();
   const live = demo.liveCase;
-  const miami = state.stores.find((s) => s.id === "miami-wynwood");
+  const miami = state.stores.find((s) => s.id === "plant-the-future");
   const miamiAnalysis = state.analysis?.storeAnalyses.find(
-    (a) => a.store.id === "miami-wynwood"
+    (a) => a.store.id === "plant-the-future"
   );
-  const isAlert =
-    stage === "alert" ||
-    stage === "owner_call" ||
-    stage === "enrich" ||
-    stage === "found" ||
-    (miami?.activeCase && miamiAnalysis?.status === "alert");
+  const isUrgent =
+    mode === "urgent" &&
+    (stage === "alert" ||
+      stage === "owner_call" ||
+      stage === "enrich" ||
+      stage === "found" ||
+      (miami?.activeCase && miamiAnalysis?.status === "alert"));
+  const isDigest = mode === "digest";
 
   const stageNote = {
-    listening:
-      "Call Mia at Joe's Miami Wynwood. When she hits the Order tool, the webhook lands here live.",
-    alert: "SPC ≥2σ — Wynwood needs attention. Texting Pablo…",
-    owner_call: "OwnerRadar SMS sent — waiting for APPROVE / REVIEW / CALL.",
-    enrich: "Looking up who's running the Wynwood dock event…",
-    found: "Found them — LinkedIn + public info texted to Pablo.",
-  }[stage];
+    idle: "OwnerRadar talks to Yair — urgent silent failures, or a non-urgent digest from calls, texts, email, and reviews.",
+    alert: "Silent failure — ASAP commission with no install drivers. Floor didn't escalate. Texting Yair…",
+    owner_call: "OwnerRadar briefed Yair — waiting for APPROVE / REVIEW / CALL.",
+    enrich: "Looking up who's driving the hospitality commission…",
+    found:
+      mode === "digest"
+        ? "Digest ready — pick a thread to go deeper."
+        : "Found them — LinkedIn + public info texted to Yair.",
+    digest: "Non-urgent check-in — interesting signals worth a partner conversation, not a fire drill.",
+  }[stage] || "OwnerRadar is listening across the portfolio.";
 
   const stageLabel = {
-    listening: "Listening for webhook",
-    alert: "Alert · Wynwood",
-    owner_call: "SMS → Pablo",
+    idle: "Ready",
+    alert: "Urgent · silent failure",
+    owner_call: "Brief → Yair",
     enrich: "Enriching…",
-    found: "Case closed loop",
-  }[stage];
+    found: mode === "digest" ? "Digest ready" : "Loop closed",
+    digest: "Digest · non-urgent",
+  }[stage] || "Ready";
 
   const bodyHtml = `
     <p class="tile-lead">${escapeHtml(stageNote)}</p>
+    <div class="demo-actions-row">
+      <button type="button" class="btn btn-primary" data-demo-urgent>Play urgent</button>
+      <button type="button" class="btn btn-ghost" data-demo-digest>Play digest</button>
+    </div>
     <div class="demo-grid">
-      <section class="demo-card ${isAlert ? "is-hot" : ""}">
-        <h3>1 · You call Joe's cashier</h3>
+      <section class="demo-card ${isUrgent ? "is-hot" : ""}">
+        <h3>Urgent · what the floor won't say</h3>
         ${
-          stage === "listening"
+          mode !== "urgent"
             ? `<ol class="transcript">
-                <li class="muted">Dial Mia · place the big catering order · she runs the Order tool.</li>
-                <li class="muted">Waiting on <code>/api/order</code> or <code>/api/retell-order</code>…</li>
+                <li class="muted">Big ASAP order lands. No drivers / install vans. Staff don't call — don't want to disturb Yair or break bad news.</li>
+                <li class="muted">OwnerRadar notices the silent failure and briefs him.</li>
               </ol>`
             : `<ol class="transcript">
                 ${lines
@@ -1187,14 +1200,14 @@ export function renderDemoTile(mount, state, prefs, demo, handlers) {
                   .join("")}
                 ${
                   live || miami?.activeCase
-                    ? `<li><span class="who">Status</span><span class="said">${(live || miami.activeCase).qty || DEMO_ORDER.qty} pies accepted · case ${(live || miami.activeCase).caseId || DEMO_ORDER.caseId}</span></li>`
+                    ? `<li><span class="who">Case</span><span class="said">${(live || miami.activeCase).qty || DEMO_ORDER.qty} panels · ${(live || miami.activeCase).caseId || DEMO_ORDER.caseId}</span></li>`
                     : ""
                 }
               </ol>`
         }
       </section>
-      <section class="demo-card ${stage === "owner_call" || stage === "enrich" || stage === "found" ? "is-hot" : ""}">
-        <h3>2 · OwnerRadar → Pablo</h3>
+      <section class="demo-card ${isDigest || stage === "owner_call" || stage === "enrich" || (stage === "found" && mode === "urgent") ? "is-hot" : ""}">
+        <h3>${isDigest ? "Digest · high-level check-in" : "OwnerRadar → Yair"}</h3>
         <ol class="transcript">
           ${
             ownerLines.length
@@ -1204,20 +1217,20 @@ export function renderDemoTile(mount, state, prefs, demo, handlers) {
                       `<li><span class="who">${escapeHtml(l.who)}</span><span class="said">${escapeHtml(l.text)}</span></li>`
                   )
                   .join("")
-              : `<li class="muted">Quiet until a material webhook order turns Wynwood red.</li>`
+              : `<li class="muted">Idle until you play urgent (silent failure) or digest (non-urgent intel).</li>`
           }
         </ol>
         ${
           stage === "owner_call"
-            ? `<button type="button" class="btn btn-primary" data-demo-yes>Simulate Pablo: APPROVE</button>
+            ? `<button type="button" class="btn btn-primary" data-demo-yes>Simulate Yair: APPROVE</button>
                <p class="metric-note">Live path: reply APPROVE / REVIEW / CALL to the Twilio SMS.</p>`
             : ""
         }
-        ${stage === "enrich" ? `<p class="searching">Searching public event + people graph…</p>` : ""}
+        ${stage === "enrich" ? `<p class="searching">Searching public RFP + people graph…</p>` : ""}
         ${
-          stage === "found"
+          stage === "found" && mode === "urgent"
             ? `<div class="found-card">
-                <p class="found-kicker">Found him</p>
+                <p class="found-kicker">Found her</p>
                 <h4>${escapeHtml(EVENT_ORGANIZER.name)}</h4>
                 <p>${escapeHtml(EVENT_ORGANIZER.role)}</p>
                 <p><a href="${EVENT_ORGANIZER.linkedin}" target="_blank" rel="noopener">LinkedIn profile</a></p>
@@ -1226,19 +1239,19 @@ export function renderDemoTile(mount, state, prefs, demo, handlers) {
               </div>`
             : ""
         }
+        ${
+          isDigest
+            ? `<p class="metric-note">${DIGEST_ITEMS.length} threads from transcripts, reviews, email, SMS, and DMs — none on fire, all worth a partner conversation.</p>`
+            : ""
+        }
       </section>
     </div>
     <details class="agent-prompt">
-      <summary>Voice agent prompts (cashier + OwnerRadar)</summary>
+      <summary>OwnerRadar agent prompt (owner-only)</summary>
       <div class="agent-prompt-grid">
         <div>
-          <h4>Mia · cashier (inbound)</h4>
-          <p class="agent-meta">Order tool → <code>/api/order</code> or <code>/api/retell-order</code></p>
-          <pre>${CASHIER_AGENT_PROMPT.replace(/</g, "&lt;")}</pre>
-        </div>
-        <div>
-          <h4>OwnerRadar → Pablo (outbound)</h4>
-          <p class="agent-meta">CallOwner → <code>/api/call-owner</code> · TextOwner → <code>/api/text-owner</code> (Twilio SMS)</p>
+          <h4>OwnerRadar → Yair</h4>
+          <p class="agent-meta">Urgent silent failures · non-urgent digests · GetStoreBrief · TextOwner</p>
           <pre>${OWNER_RADAR_AGENT_PROMPT.replace(/</g, "&lt;")}</pre>
         </div>
       </div>
@@ -1247,16 +1260,16 @@ export function renderDemoTile(mount, state, prefs, demo, handlers) {
 
   mount.innerHTML = tileShell({
     id: "demo",
-    title: "Demo Controls",
-    status: isAlert ? "attention" : "normal",
-    live: stage === "listening",
+    title: "OwnerRadar demo",
+    status: isUrgent ? "attention" : isDigest ? "watch" : "normal",
+    live: stage === "idle",
     headline: stageLabel,
-    secondaryMetric: "Live webhook path",
+    secondaryMetric: "Owner brief · no cashier agent",
     summary: stageNote,
-    alertCount: isAlert ? 1 : 0,
-    expanded: p.expanded || isAlert,
+    alertCount: isUrgent ? 1 : 0,
+    expanded: p.expanded || isUrgent || isDigest,
     pinned: p.pinned,
-    actionsHtml: `<button type="button" class="btn btn-ghost btn-sm" data-demo-reset>Reset view</button>`,
+    actionsHtml: `<button type="button" class="btn btn-ghost btn-sm" data-demo-reset>Reset</button>`,
     bodyHtml,
   });
 
@@ -1267,6 +1280,14 @@ export function renderDemoTile(mount, state, prefs, demo, handlers) {
   mount.querySelector("[data-demo-yes]")?.addEventListener("click", (e) => {
     e.stopPropagation();
     handlers.onYes();
+  });
+  mount.querySelector("[data-demo-urgent]")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    handlers.onUrgent?.();
+  });
+  mount.querySelector("[data-demo-digest]")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    handlers.onDigest?.();
   });
 }
 
@@ -1289,7 +1310,7 @@ export function orderDrawerHtml(order, state) {
       </div>
       <div class="drawer-kpi-row">
         <div class="detail-kpi ${order.isMaterial ? "severity-alert" : ""}">
-          <span class="metric-label">Pizzas</span>
+          <span class="metric-label">Units</span>
           <strong class="tabular">${formatKpi(order.pizzaCount, "number")}</strong>
         </div>
         <div class="detail-kpi">
@@ -1303,7 +1324,7 @@ export function orderDrawerHtml(order, state) {
       </div>
       <dl class="order-facts">
         <div><dt>When needed</dt><dd>${escapeHtml(order.whenNeeded || "—")}</dd></div>
-        <div><dt>Delivery / pickup</dt><dd>${escapeHtml(order.deliveryWhere || "—")}</dd></div>
+        <div><dt>Install / delivery</dt><dd>${escapeHtml(order.deliveryWhere || "—")}</dd></div>
         <div><dt>Accepted</dt><dd>${timeLabel(order.occurredAt)}</dd></div>
         ${
           order.caseId
@@ -1323,7 +1344,7 @@ export function orderDrawerHtml(order, state) {
             (line) =>
               `<li><span>${escapeHtml(
                 (line.item || "Item") === "mixed_pies"
-                  ? "mixed pies"
+                  ? "mixed pieces"
                   : line.item || "Item"
               )}${line.qty ? ` × ${line.qty}` : ""}</span><strong class="tabular">${
                 line.qty && order.pizzaCount
@@ -1339,7 +1360,7 @@ export function orderDrawerHtml(order, state) {
       </ul>
       ${
         flags.length
-          ? `<h3>Related location signals</h3>
+          ? `<h3>Related business signals</h3>
              <ul class="insight-list">${flags
                .slice(0, 4)
                .map(
@@ -1445,7 +1466,7 @@ export function locationDrawerHtml(storeId, state) {
       </div>
       <p class="location-narrative">${escapeHtml(
         status === "alert" && store.activeCase
-          ? `${store.name} has a live material catering case. ${narrative}`
+          ? `${store.name} has a live mural commission case. ${narrative}`
           : `${store.name} is producing ${formatKpi(store.kpis.revenue, "currency")} today. ${narrative}`
       )}</p>
 
@@ -1496,7 +1517,7 @@ export function locationDrawerHtml(storeId, state) {
             storeOrders
               .map(
                 (o) =>
-                  `<li><button type="button" class="linkish" data-drawer-order="${o.id}">${timeShort(o.occurredAt)} · ${o.pizzaCount} pies · ${money(o.ticketCents)}</button><strong>${orderExceptionTag(o)}</strong></li>`
+                  `<li><button type="button" class="linkish" data-drawer-order="${o.id}">${timeShort(o.occurredAt)} · ${o.pizzaCount} panels · ${money(o.ticketCents)}</button><strong>${orderExceptionTag(o)}</strong></li>`
               )
               .join("") || "<li>No recent orders in feed</li>"
           }
@@ -1532,14 +1553,14 @@ export function locationDrawerHtml(storeId, state) {
       </details>
 
       <details class="drawer-cat">
-        <summary>Calls · Discounts · Delivery · Utilities</summary>
+        <summary>Calls · Discounts · Lead time · Utilities</summary>
         <div class="detail-kpi-grid">
           <div class="detail-kpi"><span class="metric-label">Calls</span><strong>${store.kpis.phoneCallsToday || 0}</strong></div>
           <div class="detail-kpi"><span class="metric-label">Discount rate</span><strong>${formatKpi(store.kpis.discountRate, "percent")}</strong></div>
           <div class="detail-kpi"><span class="metric-label">Refund rate</span><strong>${formatKpi(store.kpis.refundRate, "percent")}</strong></div>
-          <div class="detail-kpi"><span class="metric-label">Delivery time</span><strong>${formatKpi(store.kpis.deliveryEta, "minutes")}</strong></div>
+          <div class="detail-kpi"><span class="metric-label">Install lead time</span><strong>${formatKpi(store.kpis.deliveryEta, "minutes")}</strong></div>
           <div class="detail-kpi"><span class="metric-label">Water today</span><strong>${(store.kpis.waterGallonsToday || 0).toFixed(1)} gal</strong></div>
-          <div class="detail-kpi"><span class="metric-label">Dough produced</span><strong>${(store.kpis.doughLbsToday || 0).toFixed(1)} lbs</strong></div>
+          <div class="detail-kpi"><span class="metric-label">Material processed</span><strong>${(store.kpis.doughLbsToday || 0).toFixed(1)} sqft</strong></div>
         </div>
       </details>
 
@@ -1570,7 +1591,7 @@ export function metricDrawerHtml(kpiId, state, storeId = null) {
       <div class="drawer-section">
         <p class="eyebrow">Network</p>
         <p class="metric-value tabular">${calls}</p>
-        <p>Phone calls recorded across locations today.</p>
+        <p>Phone calls recorded across businesses today.</p>
         <p class="metric-note">Data source: store KPI snapshots · Last updated ${timeLabel(state.asOf)}</p>
       </div>`;
   }
@@ -1579,7 +1600,7 @@ export function metricDrawerHtml(kpiId, state, storeId = null) {
       <div class="drawer-section">
         <p class="eyebrow">Network</p>
         <p class="metric-value tabular">${analysis.group.openRisks}</p>
-        <p>Shops where something looks unusual versus other locations or this week's usual.</p>
+        <p>Businesses that look unusual versus peers or this week's usual.</p>
         <ul class="insight-list">
           ${analysis.storeAnalyses
             .filter((a) => a.status === "alert")
@@ -1636,7 +1657,7 @@ export function metricDrawerHtml(kpiId, state, storeId = null) {
             ? flags
                 .map((f) => `<li>${escapeHtml(f.copy || f.why || plainAlertTitle(f))}</li>`)
                 .join("")
-            : "<li>Looks normal versus other shops and this week's usual.</li>"
+            : "<li>Looks normal versus other businesses and this week's usual.</li>"
         }
       </ul>
       <div class="drawer-recommend">
@@ -1677,7 +1698,7 @@ export function alertDrawerHtml(item, state) {
         <h3>Recommended action</h3>
         <p>${escapeHtml(item.action)}</p>
       </div>
-      <button type="button" class="btn btn-primary" data-drawer-store="${item.storeId}">Open location</button>
+      <button type="button" class="btn btn-primary" data-drawer-store="${item.storeId}">Open business</button>
       <details class="math-hint drawer-math">
         <summary class="info-btn" aria-label="How we calculated this" title="How we calculated this">i</summary>
         <div class="math-hint-body">

@@ -23,6 +23,7 @@ import {
   renderDiscountsTile,
   renderDeliveryTile,
   renderUtilitiesTile,
+  renderDemoTile,
   orderDrawerHtml,
   locationDrawerHtml,
   metricDrawerHtml,
@@ -78,6 +79,7 @@ const el = {
   attention: document.querySelector("[data-tile-attention]"),
   orders: document.querySelector("[data-tile-orders]"),
   locations: document.querySelector("[data-tile-locations]"),
+  demo: document.querySelector("[data-tile-demo]"),
   inventory: document.querySelector("[data-tile-inventory]"),
   labor: document.querySelector("[data-tile-labor]"),
   phone: document.querySelector("[data-tile-phone]"),
@@ -123,9 +125,9 @@ function applySnapshot(snapshot) {
 }
 
 function maybeEscalateFromLiveOrder() {
-  const miami = state.stores.find((s) => s.id === "miami-wynwood");
+  const miami = state.stores.find((s) => s.id === "plant-the-future");
   const miamiAnalysis = state.analysis?.storeAnalyses.find(
-    (a) => a.store.id === "miami-wynwood"
+    (a) => a.store.id === "plant-the-future"
   );
   if (!miami?.activeCase || miamiAnalysis?.status !== "alert") return;
 
@@ -134,7 +136,7 @@ function maybeEscalateFromLiveOrder() {
     : Infinity;
   if (ageMs >= 10 * 60_000) return;
 
-  state.selectedId = "miami-wynwood";
+  state.selectedId = "plant-the-future";
   state.orderFilter = "material";
   state.tilePrefs = setTileExpanded(state.tilePrefs, "attention", true);
   saveTilePrefs(state.tilePrefs);
@@ -365,6 +367,13 @@ function render() {
   const storeHandlers = {
     onSelectStore: (id) => openLocationDrawer(id),
   };
+
+  renderDemoTile(el.demo, state, state.tilePrefs, demo, {
+    onReset: () => demo.reset(),
+    onYes: () => demo.approveEnrichment(),
+    onUrgent: () => demo.playUrgent(),
+    onDigest: () => demo.playDigest(),
+  });
 
   renderAttentionTile(el.attention, state, state.tilePrefs, {
     onDismiss: (key) => {

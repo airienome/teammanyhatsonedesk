@@ -82,19 +82,19 @@ export async function tickStore(store, at = new Date()) {
     events.push(`call ${outcome}`);
   }
 
-  // Routine POS: 1–3 pies, never catering-scale
+  // Routine POS: 1–3 pieces, never commission-scale
   if (chance(0.18 + demand * 0.45)) {
     const pizzas = chance(0.15 * demand) ? 3 : chance(0.4) ? 2 : 1;
-    const ticket = Math.floor(pizzas * rand(1450, 2100));
-    const refunded = chance(0.015); // ~1.5% refunds — realistic
+    const ticket = Math.floor(pizzas * rand(4500, 28000));
+    const refunded = chance(0.015);
 
     const orderRows = await sql`
       INSERT INTO pos_orders (
         store_id, channel, items_json, pizza_count, ticket_cents, status, occurred_at
       ) VALUES (
         ${store.id},
-        ${pick(["pos", "pos", "web", "phone", "uber_eats", "door_dash"])},
-        ${JSON.stringify([{ item: "slice_or_pie", qty: pizzas }])},
+        ${pick(["pos", "pos", "web", "phone", "trade", "commission"])},
+        ${JSON.stringify([{ item: "arrangement", qty: pizzas }])},
         ${pizzas},
         ${ticket},
         ${refunded ? "refunded" : "paid"},
@@ -109,24 +109,24 @@ export async function tickStore(store, at = new Date()) {
     }
 
     for (const [sku, min, par] of [
-      ["dough", 20, 90],
-      ["water", 8, 45],
-      ["cheese", 12, 55],
-      ["sauce", 4, 20],
-      ["boxes", 40, 400],
+      ["preserved_moss", 40, 220],
+      ["sheet_moss", 20, 140],
+      ["reindeer_moss", 8, 45],
+      ["wood_frames", 10, 60],
+      ["hanging_hardware", 8, 50],
     ]) {
       await ensureStock(store.id, sku, min, par);
     }
 
-    const doughUse = Number((pizzas * rand(0.85, 1.1)).toFixed(2));
-    const waterUse = Number((pizzas * rand(0.12, 0.28)).toFixed(2));
+    const mossUse = Number((pizzas * rand(4, 9)).toFixed(2));
+    const waterUse = Number((pizzas * rand(0.2, 0.5)).toFixed(2));
 
     for (const [sku, delta] of [
-      ["dough", -doughUse],
-      ["water", -waterUse],
-      ["cheese", -Number((pizzas * rand(0.35, 0.55)).toFixed(2))],
-      ["boxes", -pizzas],
-      ["sauce", -Number((pizzas * 0.1).toFixed(2))],
+      ["preserved_moss", -mossUse],
+      ["sheet_moss", -Number((pizzas * rand(1.5, 3)).toFixed(2))],
+      ["wood_frames", -pizzas],
+      ["hanging_hardware", -pizzas],
+      ["reindeer_moss", -Number((pizzas * rand(0.3, 0.8)).toFixed(2))],
     ]) {
       const bal = await latestBalance(sql, store.id, sku);
       const next = Number(Math.max(0, bal + delta).toFixed(3));
@@ -144,22 +144,22 @@ export async function tickStore(store, at = new Date()) {
         ${waterUse},
         ${Number(rand(0.08, 0.35).toFixed(2))},
         ${Number(rand(0.5, 1.8).toFixed(2))},
-        ${doughUse},
+        ${mossUse},
         ${atIso}
       )
     `;
-    events.push(`pos ${pizzas} pie${pizzas > 1 ? "s" : ""}`);
+    events.push(`pos ${pizzas} pc${pizzas > 1 ? "s" : ""}`);
   }
 
-  // Occasional dough batch during service
+  // Occasional moss restock during service
   if (chance(0.04 + demand * 0.04)) {
     const add = Number(rand(10, 22).toFixed(2));
-    const bal = await latestBalance(sql, store.id, "dough");
+    const bal = await latestBalance(sql, store.id, "preserved_moss");
     await sql`
       INSERT INTO inventory_ledger (store_id, sku, delta, balance, reason, occurred_at)
-      VALUES (${store.id}, 'dough', ${add}, ${Number((bal + add).toFixed(3))}, 'dough_batch', ${atIso})
+      VALUES (${store.id}, 'preserved_moss', ${add}, ${Number((bal + add).toFixed(3))}, 'moss_restock', ${atIso})
     `;
-    events.push("dough batch");
+    events.push("moss restock");
   }
 
   // Soft clock alignment with shifts
@@ -252,7 +252,7 @@ const isMain = process.argv[1] && process.argv[1].endsWith("simulate.mjs");
 
 if (isMain) {
   const intervalMs = Number(process.env.SIM_INTERVAL_MS || 20000);
-  console.log(`Realistic Joe's sim every ${intervalMs}ms…`);
+  console.log(`Realistic portfolio sim every ${intervalMs}ms…`);
   const run = async () => {
     try {
       const { stores: summary, chain } = await simulateTick();

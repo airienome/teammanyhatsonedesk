@@ -82,7 +82,7 @@ function enrichOrder(row) {
     occurredAt: row.occurred_at,
     items,
     caseId: primary.caseId || null,
-    itemLabel: primary.item || (pizzaCount ? `${pizzaCount} pies` : "Order"),
+    itemLabel: primary.item || (pizzaCount ? `${pizzaCount} panels` : "Order"),
     whenNeeded: when,
     deliveryWhere: where,
     note: primary.note || null,

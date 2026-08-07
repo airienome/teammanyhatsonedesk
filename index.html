@@ -3,143 +3,165 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OwnerRadar — Product Requirements Document</title>
+    <title>OwnerRadar — Be the first to know</title>
     <meta
       name="description"
-      content="OwnerRadar is an AI manager for businesses. Be the first to know. Not the last."
+      content="OwnerRadar is your always-on manager. It reads call transcripts, texts, email, ERP, and CRM — then briefs you every day with full context."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="OwnerRadar" />
-    <meta property="og:title" content="OwnerRadar — AI Manager for Businesses" />
+    <meta property="og:title" content="OwnerRadar — Be the first to know" />
     <meta
       property="og:description"
-      content="Be the first to know. Not the last. Detects big orders, capacity risks, and alerts you by text or call."
+      content="An always-on manager for owners who wear many hats. Daily briefing call. Urgent when it matters."
     />
-    <meta
-      property="og:image"
-      content="https://cursor-miami-woad.vercel.app/ownerradar-og.png"
-    />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1024" />
-    <meta property="og:image:height" content="1536" />
-    <meta property="og:url" content="https://cursor-miami-woad.vercel.app/" />
+    <meta property="og:image" content="https://owneradar.com/ownerradar-og.png" />
+    <meta property="og:url" content="https://owneradar.com/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="OwnerRadar — AI Manager for Businesses" />
+    <meta name="twitter:title" content="OwnerRadar — Be the first to know" />
     <meta
       name="twitter:description"
-      content="Be the first to know. Not the last."
+      content="Always-on manager. Call transcripts, email, texts, ERP, CRM. Daily briefing with full context."
     />
-    <meta
-      name="twitter:image"
-      content="https://cursor-miami-woad.vercel.app/ownerradar-og.png"
-    />
+    <meta name="twitter:image" content="https://owneradar.com/ownerradar-og.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="atmosphere" aria-hidden="true">
-      <div class="radar-grid"></div>
-      <div class="radar-sweep"></div>
-      <div class="glow glow-a"></div>
-      <div class="glow glow-b"></div>
+      <div class="field"></div>
+      <div class="sweep"></div>
+      <div class="grain"></div>
     </div>
 
     <header class="top">
-      <p class="domain">cursor-miami.cyvine.com</p>
-      <p class="doc-meta">PRD · Hackathon MVP v0.1</p>
+      <p class="domain">owneradar.com</p>
+      <nav class="top-nav" aria-label="Primary">
+        <a href="#signals">Signals</a>
+        <a href="#briefing">Daily call</a>
+        <a href="app/">App</a>
+      </nav>
     </header>
 
     <main>
       <section class="hero">
-        <p class="eyebrow">AI Manager for Businesses</p>
-        <h1 class="brand"><span>Owner</span><span>Radar</span></h1>
-        <p class="lede">
-          Know when one conversation changes the whole business.
+        <h1 class="brand" aria-label="OwnerRadar">
+          <span>Owner</span><span>Radar</span>
+        </h1>
+        <p class="lede">Be the first to know.</p>
+        <p class="support">
+          An always-on manager that watches what your business already produces —
+          then briefs you before opportunity turns into regret.
         </p>
         <div class="cta-row">
-          <a class="btn btn-primary" href="app/">Enter app</a>
-          <a
-            class="btn btn-ghost"
-            href="prd.pdf"
-            download="OwnerRadar_PRD_Hackathon_MVP_v0.1.pdf"
-          >
-            Download PRD
-          </a>
+          <a class="btn btn-primary" href="app/">Open command center</a>
+          <a class="btn btn-ghost" href="#briefing">See the daily call</a>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="brief-panel">
+            <p class="brief-kicker">Morning brief · live</p>
+            <p class="brief-line">
+              “Three threads worth your time. One silent failure on Plant The Future —
+              ASAP install, no vans. Want options or the digest first?”
+            </p>
+          </div>
         </div>
       </section>
 
-      <section class="thesis" aria-labelledby="thesis-heading">
-        <h2 id="thesis-heading">The product thesis</h2>
-        <p>
-          Business owners do not need more raw data. They need an intelligence
-          layer that notices material events, understands who made each decision
-          and under which role, escalates only what matters, and helps
-          coordinate a response before an opportunity is lost or a problem
-          becomes expensive.
+      <section class="signals" id="signals" aria-labelledby="signals-heading">
+        <h2 id="signals-heading">It reads the business you already run</h2>
+        <p class="section-lead">
+          Not another dashboard to feed. OwnerRadar listens across the channels
+          your team already uses — and notices what never gets escalated.
         </p>
-        <ol class="loop" aria-label="Core promise">
-          <li>Unseen</li>
-          <li>Detected</li>
-          <li>Understood</li>
-          <li>Escalated</li>
-          <li>Coordinated</li>
-          <li>Verified</li>
+        <ul class="signal-rail" aria-label="Signal sources">
+          <li>
+            <span class="signal-name">Call transcripts</span>
+            <span class="signal-copy">What was promised on the phone when you weren’t in the room.</span>
+          </li>
+          <li>
+            <span class="signal-name">Texts &amp; SMS</span>
+            <span class="signal-copy">Floor chatter, vendor delays, and the messages nobody wanted to forward.</span>
+          </li>
+          <li>
+            <span class="signal-name">Email</span>
+            <span class="signal-copy">Scope creep, trade inquiries, and quiet commitments that need a decision.</span>
+          </li>
+          <li>
+            <span class="signal-name">ERP &amp; CRM</span>
+            <span class="signal-copy">Orders, inventory, capacity, and customer truth — tied to the conversation.</span>
+          </li>
+          <li>
+            <span class="signal-name">Reviews &amp; DMs</span>
+            <span class="signal-copy">Soft customer signal before it becomes a hard problem.</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="briefing" id="briefing" aria-labelledby="briefing-heading">
+        <h2 id="briefing-heading">A daily call with full context</h2>
+        <p class="section-lead">
+          Every morning, OwnerRadar calls you — not with a dump of metrics, but with
+          what happened, what it means, and where you want to go next.
+        </p>
+        <ol class="brief-steps">
+          <li>
+            <strong>What happened</strong>
+            <span>Material events across transcripts, tickets, and systems — named by business.</span>
+          </li>
+          <li>
+            <strong>What stayed quiet</strong>
+            <span>Silent failures the floor didn’t escalate because they didn’t want to disturb you.</span>
+          </li>
+          <li>
+            <strong>Where you want to go</strong>
+            <span>One clear ask. Approve, dig deeper, or set direction for the day.</span>
+          </li>
         </ol>
       </section>
 
-      <section class="demo" aria-labelledby="demo-heading">
-        <h2 id="demo-heading">Primary demo</h2>
-        <p>
-          Built around
-          <a href="https://www.joespizzanyc.com/" target="_blank" rel="noopener"
-            >Joe's Pizza</a
-          >
-          — the hackathon pizza supplier. You call a Wynwood cashier agent, order
-          300 pies ASAP to the dock, the Miami location turns red, and OwnerRadar
-          calls the owner: we can supply it — want me to find who's running that
-          event? Say yes, and it texts LinkedIn + public info.
-        </p>
+      <section class="modes" id="modes" aria-labelledby="modes-heading">
+        <h2 id="modes-heading">Two speeds. One manager.</h2>
+        <div class="mode-split">
+          <article>
+            <h3>Urgent</h3>
+            <p>
+              A big ASAP order lands and there are no drivers. Staff hope to figure
+              it out rather than break bad news. OwnerRadar calls you anyway —
+              so you’re first to know, not last.
+            </p>
+          </article>
+          <article>
+            <h3>Digest</h3>
+            <p>
+              High-level, non-urgent. Interesting threads from the week —
+              opportunities, soft reviews, slow burns — for when you want a
+              partner conversation, not a fire drill.
+            </p>
+          </article>
+        </div>
       </section>
 
-      <section class="document" id="document" aria-labelledby="doc-heading">
-        <div class="document-head">
-          <div>
-            <h2 id="doc-heading">Product Requirements Document</h2>
-            <p>
-              Hackathon build specification · August 6, 2026 · 16 pages
-            </p>
-          </div>
-          <a
-            class="btn btn-primary"
-            href="prd.pdf"
-            download="OwnerRadar_PRD_Hackathon_MVP_v0.1.pdf"
-          >
-            Download PDF
-          </a>
-        </div>
-        <div class="viewer">
-          <iframe
-            title="OwnerRadar Product Requirements Document"
-            src="OwnerRadar_PRD_Hackathon_MVP_v0.1.pdf#view=FitH"
-            loading="lazy"
-          ></iframe>
-        </div>
-        <p class="viewer-fallback">
-          Can’t see the preview?
-          <a href="prd.pdf" download="OwnerRadar_PRD_Hackathon_MVP_v0.1.pdf"
-            >Download the PDF</a
-          >.
+      <section class="close" aria-labelledby="close-heading">
+        <h2 id="close-heading">Many hats. One desk.</h2>
+        <p class="section-lead">
+          Built for owners who run more than one thing — and can’t afford the
+          business to go on autopilot while they’re away.
         </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="app/">Enter OwnerRadar</a>
+          <a class="btn btn-ghost" href="mailto:hello@owneradar.com">hello@owneradar.com</a>
+        </div>
       </section>
     </main>
 
     <footer>
-      <p>OwnerRadar · Confidential working draft · Cursor Miami</p>
+      <p>OwnerRadar · Be the first to know · <a href="app/">App</a></p>
     </footer>
   </body>
 </html>

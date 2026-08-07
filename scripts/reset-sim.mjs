@@ -27,7 +27,7 @@ async function q(text, params = []) {
   return res.rows;
 }
 
-console.log("Resetting Joe's sim to a clean dinner service…");
+console.log("Resetting portfolio sim to a clean dinner service…");
 
 await q(`
   CREATE TABLE IF NOT EXISTS sim_state (

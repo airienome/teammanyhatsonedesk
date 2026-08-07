@@ -67,26 +67,26 @@ function plainMetric(def) {
     revenue: "sales",
     orders: "orders",
     avgTicket: "average ticket",
-    capacityUtil: "kitchen load",
+    capacityUtil: "ops load",
     refundRate: "refunds",
     discountRate: "discounting",
-    deliveryEta: "delivery times",
+    deliveryEta: "lead times",
     staffingFill: "staffing",
-    inventoryDays: "inventory cover",
+    inventoryDays: "materials cover",
   };
   return map[def.key] || def.label.toLowerCase();
 }
 
 function compareAgainst(source) {
-  return source === "peer" ? "your other shops" : "this shop's usual week";
+  return source === "peer" ? "your other businesses" : "this business's usual week";
 }
 
 function sourcePlain(source) {
-  return source === "peer" ? "other shops" : "this shop's last 7 days";
+  return source === "peer" ? "other businesses" : "this business's last 7 days";
 }
 
 /**
- * Plain-language alert for pizza owners.
+ * Plain-language alert for portfolio owners.
  * Math stays in `math` for the info (i) control.
  */
 function buildSuggestionNarratives(store, def, z, source, baselineValue, value) {
@@ -105,20 +105,20 @@ function buildSuggestionNarratives(store, def, z, source, baselineValue, value) 
         ? `${store.name} is busier than ${against}`
         : `${store.name} is quieter than ${against}`;
       body = above
-        ? `${store.name} has ${vs} orders today vs about ${base} at ${against}. Make sure the kitchen and front counter can keep up.`
+        ? `${store.name} has ${vs} orders today vs about ${base} at ${against}. Make sure the studio and gallery floor can keep up.`
         : `${store.name} has ${vs} orders today vs about ${base} at ${against}. ${def.suggestion}`;
       break;
     case "deliveryEta":
-      headline = `${store.name} deliveries are running slow`;
-      body = `Deliveries are averaging ${vs} vs about ${base} for ${against}. ${def.suggestion}`;
+      headline = `${store.name} fulfillment is running slow`;
+      body = `Lead times are averaging ${vs} vs about ${base} for ${against}. ${def.suggestion}`;
       break;
     case "capacityUtil":
       headline = above
-        ? `${store.name}'s kitchen is slammed`
-        : `${store.name}'s kitchen is quieter than usual`;
+        ? `${store.name}'s ops are slammed`
+        : `${store.name}'s ops are quieter than usual`;
       body = above
-        ? `Kitchen load is ${vs} vs about ${base} for ${against}. ${def.suggestion}`
-        : `Kitchen load is ${vs} vs about ${base} for ${against}. Fine if demand is soft — otherwise check why tickets are down.`;
+        ? `Ops load is ${vs} vs about ${base} for ${against}. ${def.suggestion}`
+        : `Ops load is ${vs} vs about ${base} for ${against}. Fine if demand is soft — otherwise check why tickets are down.`;
       break;
     case "discountRate":
       headline = `${store.name} is discounting more than usual`;
@@ -206,7 +206,7 @@ export function analyzeStores(stores = STORES, defs = KPI_DEFS) {
           label: def.label,
           plainLabel: plainMetric(def),
           source: "peer",
-          sourceLabel: "other shops",
+          sourceLabel: "other businesses",
           value,
           baseline: peer.mean,
           z: peerZ,
@@ -242,7 +242,7 @@ export function analyzeStores(stores = STORES, defs = KPI_DEFS) {
           label: def.label,
           plainLabel: plainMetric(def),
           source: "history",
-          sourceLabel: "this shop's usual week",
+          sourceLabel: "this business's usual week",
           value,
           baseline: histMean,
           z: histZ,

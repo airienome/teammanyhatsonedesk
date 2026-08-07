@@ -176,7 +176,7 @@ export default async function handler(req, res) {
     const ooc = stores.filter((s) => s.outOfControl);
     const scope = storeId
       ? stores[0]?.name || storeId
-      : "all Joe's shops";
+      : "the whole portfolio";
 
     // Voice answer for "what are total sales?" — matches dashboard "Sales today"
     const salesLine = `Sales today across ${scope}: ${money(
@@ -187,7 +187,7 @@ export default async function handler(req, res) {
       ? ` Attention: ${ooc
           .map((s) => `${s.name} — ${s.breachSummary}`)
           .join(". ")}.`
-      : ` All watched shops look normal versus peers and their usual week.`;
+      : ` All watched businesses look normal versus peers and their usual week.`;
 
     const speakable = `${salesLine}${alertLine}`;
 

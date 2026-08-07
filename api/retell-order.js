@@ -7,7 +7,7 @@ import { ALERT_Z } from "../lib/spc.mjs";
 
 /**
  * Retell custom function + post-call webhook entry.
- * Escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (10).
+ * Escalation: SPC ≥2σ OR qty > OWNER_CALL_QTY_THRESHOLD (8).
  */
 function parseBody(req) {
   if (!req.body) return {};
@@ -32,7 +32,7 @@ function extractFromRetell(body) {
   const qty = qtyRaw != null ? Number(qtyRaw) : null;
   const when = String(args.when ?? analysis.when ?? "ASAP");
   const where = String(
-    args.where ?? args.location ?? analysis.where ?? "the dock, Wynwood"
+    args.where ?? args.location ?? analysis.where ?? "1 Hotel South Beach lobby"
   );
   const callId = body.call?.call_id || body.call_id || null;
 
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     const { qty, when, where, callId } = extractFromRetell(body);
     if (qty == null || Number.isNaN(qty)) {
       res.status(400).json({
-        error: "qty is required — pass the pizza count from the conversation",
+        error: "qty is required — pass the panel count from the conversation",
       });
       return;
     }
@@ -79,12 +79,12 @@ export default async function handler(req, res) {
       channel: "phone",
       caseId: callId ? `CALL-${callId}` : null,
       callerLabel: "retell_voice",
-      note: `${qty} pies · ${when} · ${where}${callId ? ` · call ${callId}` : ""}`,
+      note: `${qty} panels · ${when} · ${where}${callId ? ` · call ${callId}` : ""}`,
     });
 
     const snapshot = await fetchNetworkSnapshot();
     const escalateNote = result.largeCatering
-      ? ` Large catering (qty > ${OWNER_CALL_QTY_THRESHOLD}) — owner alerted.`
+      ? ` Large commission (qty > ${OWNER_CALL_QTY_THRESHOLD}) — owner alerted.`
       : result.outOfControl
         ? ` Out of control ≥${ALERT_Z}σ (${result.breachSummary}).`
         : ` Within ${ALERT_Z}σ and qty ≤ ${OWNER_CALL_QTY_THRESHOLD} — owner not called.`;
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
     res.status(200).json({
       ok: true,
       status: "entered",
-      message: `Order entered: ${qty} pies ${when} to ${where}. Capacity util ${result.kpi.capacityUtil}%.${escalateNote}`,
+      message: `Order entered: ${qty} panels ${when} to ${where}. Capacity util ${result.kpi.capacityUtil}%.${escalateNote}`,
       caseId: result.caseId,
       isMaterial: result.outOfControl,
       outOfControl: result.outOfControl,

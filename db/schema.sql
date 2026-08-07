@@ -1,4 +1,5 @@
--- Joe's Pizza ops schema for OwnerRadar hackathon demo
+-- Yair Marcoschamer portfolio ops schema for OwnerRadar client demo
+-- capacity_pizzas / pizza_count = capacity units (panels, covers, jobs)
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

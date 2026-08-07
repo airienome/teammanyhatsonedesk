@@ -30,17 +30,20 @@ export function channelLabel(channel) {
   const map = {
     phone: "Phone",
     web: "Web",
-    pos: "Counter",
-    counter: "Counter",
-    uber_eats: "Uber Eats",
-    door_dash: "DoorDash",
+    pos: "Gallery",
+    counter: "Gallery",
+    trade: "Trade",
+    commission: "Commission",
+    uber_eats: "Delivery app",
+    door_dash: "Delivery app",
   };
   return map[channel] || channel || "POS";
 }
 
 export function itemDisplay(order) {
   const raw = order.itemLabel || order.item || "Order";
-  if (raw === "mixed_pies") return "mixed pies";
+  if (raw === "mixed_pies") return "mixed pieces";
+  if (raw === "cheese_pie" || raw === "slice_or_pie") return "arrangement";
   return raw;
 }
 
@@ -97,10 +100,10 @@ export function plainAlertTitle(suggestion) {
   return `${store}: keep an eye on ${label}`;
 }
 
-export function materialCaseTitle(activeCase, storeName = "Miami Wynwood") {
+export function materialCaseTitle(activeCase, storeName = "Plant The Future") {
   const qty = activeCase?.qty;
-  if (qty) return `${storeName} just took a ${qty}-pizza order`;
-  return `${storeName} just took a huge catering order`;
+  if (qty) return `${storeName}: ${qty}-panel ASAP — floor didn't escalate`;
+  return `${storeName}: silent failure — material commit not escalated`;
 }
 
 export function materialCaseImpact(activeCase) {
@@ -109,12 +112,12 @@ export function materialCaseImpact(activeCase) {
   const valuePart = value
     ? ` Ticket about ${formatKpi(value, "currency")}.`
     : "";
-  const qtyPart = qty ? ` That's ${qty} pies` : " That order";
-  return `${qtyPart} is bigger than this shop usually handles.${valuePart} Dough and staffing may run short by the dinner rush.`;
+  const qtyPart = qty ? ` ${qty} panels ASAP` : " A large ASAP commission";
+  return `${qtyPart} with no install drivers / vans available.${valuePart} Staff hoped to figure it out rather than disturb the owner.`;
 }
 
 export function materialRecommendedAction() {
-  return "Confirm dough and cheese, add float staff if you can, and send overflow pies to a sister location.";
+  return "Brief the owner, float install capacity from Pollinator or push the window, and loop the buyer if needed.";
 }
 
 export function locationDiagnostic(analysis) {
@@ -123,8 +126,8 @@ export function locationDiagnostic(analysis) {
   if (store?.activeCase && status === "alert") {
     const qty = store.activeCase.qty;
     return qty
-      ? `Big catering order (${qty} pies) is stressing this shop.`
-      : "A large catering order is stressing this shop.";
+      ? `Silent failure: ${qty}-panel ASAP with no install capacity — floor didn't escalate.`
+      : "Silent failure: material ASAP commit without owner escalation.";
   }
   if (status === "alert") {
     const top = [...(flags || [])].sort((a, b) => Math.abs(b.z) - Math.abs(a.z))[0];
@@ -132,14 +135,14 @@ export function locationDiagnostic(analysis) {
     if (top?.title) return top.title;
     return "Something unusual is going on — open this location for details.";
   }
-  if (!flags?.length) return "Everything looks normal versus other shops and this week's usual.";
+  if (!flags?.length) return "Everything looks normal versus other desks and this week's usual.";
   const top = [...flags].sort((a, b) => Math.abs(b.z) - Math.abs(a.z))[0];
   return top.copy || top.title || `${top.label} looks off versus ${top.sourceLabel}.`;
 }
 
 export function orderExceptionTag(order) {
-  if (order.isMaterial) return "Large order";
-  if (order.channel === "phone" && (order.pizzaCount || 0) >= 20) {
+  if (order.isMaterial) return "Large commission";
+  if (order.channel === "phone" && (order.pizzaCount || 0) >= 8) {
     return "Capacity risk";
   }
   return "Routine";

@@ -10,7 +10,7 @@ import { twilioConfigured, ownerPhone } from "../lib/sms.mjs";
  *   → TwiML reply
  *
  * Manual test: POST JSON
- *   { "action": "alert", "storeId": "miami-wynwood" }
+ *   { "action": "alert", "storeId": "plant-the-future" }
  *   { "action": "reply", "body": "APPROVE", "from": "+1…" }
  *
  * Configure Twilio number webhook:

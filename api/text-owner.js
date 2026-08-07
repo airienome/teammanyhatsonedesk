@@ -1,14 +1,14 @@
 import { buildEnrichmentSms, sendOwnerSms } from "../lib/sms.mjs";
 
 /**
- * OwnerRadar TextOwner tool — SMS Pablo LinkedIn + public event info.
+ * OwnerRadar TextOwner tool — SMS Yair LinkedIn + public project info.
  *
  * POST /api/text-owner
  *
  * Body (all optional — defaults to demo organizer enrichment):
  * {
- *   "name": "Alex Rivera",
- *   "role": "Head of Partnerships · Cursor Miami Hackathon",
+ *   "name": "Maya Chen",
+ *   "role": "Director of Design · Hospitality interiors",
  *   "linkedin": "https://…",
  *   "notes": ["…"],
  *   "body": "full custom SMS",   // overrides structured fields
@@ -28,12 +28,12 @@ function parseBody(req) {
 }
 
 const DEFAULT_ORGANIZER = {
-  name: "Alex Rivera",
-  role: "Head of Partnerships · Cursor Miami Hackathon",
-  linkedin: "https://www.linkedin.com/in/example-alex-rivera-hackathon",
+  name: "Maya Chen",
+  role: "Director of Design · Hospitality interiors",
+  linkedin: "https://www.linkedin.com/in/example-maya-chen-hospitality",
   publicNotes: [
-    "Public event listing: Cursor Miami hackathon — multi-day builder event at the Wynwood dock venue.",
-    "Likely recurring catering need across demo days and closing party.",
+    "Public RFP: lobby biophilic refresh — preserved moss mural for a South Beach hotel reopening.",
+    "Likely multi-property rollout if the flagship install lands on schedule.",
   ],
 };
 

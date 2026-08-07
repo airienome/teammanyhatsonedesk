@@ -21,7 +21,7 @@ function hoursFromNow(h) {
   return new Date(Date.now() + h * 3600_000);
 }
 
-console.log("Seeding Joe's Pizza stores…");
+console.log("Seeding Yair Marcoschamer portfolio…");
 
 for (const store of JOES_STORES) {
   await sql`
@@ -125,7 +125,7 @@ for (const store of JOES_STORES) {
           ${store.id},
           ${Math.random() > 0.15 ? "inbound" : "outbound"},
           ${Math.floor(rand(25, 280))},
-          ${pick(["order_taken", "menu_question", "hangup", "catering_inquiry", "complaint"])},
+          ${pick(["order_taken", "product_question", "hangup", "commission_inquiry", "complaint"])},
           ${pick(["local", "tourist", "delivery_app", "corporate", "unknown"])},
           ${new Date(at.getTime() + c * 60_000).toISOString()}
         )
@@ -134,14 +134,14 @@ for (const store of JOES_STORES) {
     const orderCount = Math.floor(rand(6, 18));
     for (let o = 0; o < orderCount; o += 1) {
       const pizzas = Math.max(1, Math.floor(rand(1, 4)));
-      const ticket = Math.floor(pizzas * rand(1400, 2200));
+      const ticket = Math.floor(pizzas * rand(4500, 28000));
       await sql`
         INSERT INTO pos_orders (
           store_id, channel, items_json, pizza_count, ticket_cents, status, occurred_at
         ) VALUES (
           ${store.id},
-          ${pick(["pos", "web", "phone", "uber_eats", "door_dash"])},
-          ${JSON.stringify([{ item: "cheese_pie", qty: pizzas }])},
+          ${pick(["pos", "web", "phone", "trade", "trade"])},
+          ${JSON.stringify([{ item: "arrangement", qty: pizzas }])},
           ${pizzas},
           ${ticket},
           ${pick(["paid", "paid", "paid", "refunded"])},

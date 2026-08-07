@@ -1,11 +1,57 @@
-/** Joe's Pizza locations — seeded from joespizzanyc.com for the Cursor Miami hackathon demo. */
+/**
+ * Yair Marcoschamer portfolio demo @ plantthefuture.owneradar.com
+ * Many hats, one desk — OwnerRadar talks to the owner (no cashier agent).
+ */
 export const ORG = {
-  id: "joes-pizza",
-  name: "Joe's Pizza",
-  tagline: "Hackathon pizza supplier · OwnerRadar demo",
-  website: "https://www.joespizzanyc.com/",
-  asOf: "2026-08-06T17:15:00-04:00",
+  id: "yair-portfolio",
+  name: "Yair Marcoschamer",
+  tagline: "Many hats, one desk · OwnerRadar portfolio demo",
+  website: "https://www.plantthefuture.com/",
+  host: "https://owneradar.com",
+  ownerName: "Yair",
+  ownerFullName: "Yair Marcoschamer",
+  flagship: "Plant The Future",
+  asOf: "2026-08-07T00:40:00-04:00",
 };
+
+export const PORTFOLIO = [
+  {
+    id: "plant-the-future",
+    legal: "Plant The Future, Inc",
+    role: "CEO",
+    focus: "Biophilic art, moss murals, gallery & design",
+  },
+  {
+    id: "lala-land",
+    legal: "Lala Land of Miami LLC",
+    role: "Member",
+    focus: "Hospitality / café at the Little River flagship",
+  },
+  {
+    id: "where-minds-create",
+    legal: "Where Minds Create, Inc / LLC",
+    role: "President / Manager",
+    focus: "Creative & multimedia studio",
+  },
+  {
+    id: "marcoschamer-group",
+    legal: "Marcoschamer Group, Inc",
+    role: "Director",
+    focus: "Holding / creative collaborative",
+  },
+  {
+    id: "pollinator",
+    legal: "Pollinator LLC",
+    role: "Member",
+    focus: "Ventures with Paloma Teppa",
+  },
+  {
+    id: "ecoist",
+    legal: "Ecoist, LLC",
+    role: "Member",
+    focus: "Eco accessories brand (legacy line)",
+  },
+];
 
 export const KPI_DEFS = [
   {
@@ -14,7 +60,7 @@ export const KPI_DEFS = [
     unit: "usd",
     higherIsBetter: true,
     format: "currency",
-    suggestion: "Check what's selling and whether ticket sizes look right.",
+    suggestion: "Check which hat is ringing the register — gallery, café, or creative.",
   },
   {
     key: "orders",
@@ -22,7 +68,7 @@ export const KPI_DEFS = [
     unit: "count",
     higherIsBetter: true,
     format: "number",
-    suggestion: "Check phones, online orders, and whether enough people are working.",
+    suggestion: "Check phones, web, walk-ins, and B2B inquiries across the portfolio.",
   },
   {
     key: "avgTicket",
@@ -30,15 +76,15 @@ export const KPI_DEFS = [
     unit: "usd",
     higherIsBetter: true,
     format: "currency",
-    suggestion: "Look at upsells, catering mix, and heavy discounting.",
+    suggestion: "Look at commission mix vs retail, café covers, and discounting.",
   },
   {
     key: "capacityUtil",
-    label: "Kitchen load",
+    label: "Ops load",
     unit: "pct",
     higherIsBetter: false,
     format: "percent",
-    suggestion: "Send overflow to a sister shop or start catering pies early.",
+    suggestion: "Float people from a quieter hat or push dates if one business is slammed.",
   },
   {
     key: "refundRate",
@@ -46,7 +92,7 @@ export const KPI_DEFS = [
     unit: "pct",
     higherIsBetter: false,
     format: "percent",
-    suggestion: "Review voids, remakes, and unauthorized comps.",
+    suggestion: "Review remakes, shipping damage, and unauthorized comps.",
   },
   {
     key: "discountRate",
@@ -54,15 +100,15 @@ export const KPI_DEFS = [
     unit: "pct",
     higherIsBetter: false,
     format: "percent",
-    suggestion: "Check cashier discount limits and exception comps.",
+    suggestion: "Check trade discounts and exception comps on the floor.",
   },
   {
     key: "deliveryEta",
-    label: "Delivery time",
+    label: "Lead time",
     unit: "min",
     higherIsBetter: false,
     format: "minutes",
-    suggestion: "Check if you've got enough drivers and routes aren't stacked.",
+    suggestion: "Check install / fulfillment load and South FL route stacking.",
   },
   {
     key: "staffingFill",
@@ -70,15 +116,15 @@ export const KPI_DEFS = [
     unit: "pct",
     higherIsBetter: true,
     format: "percent",
-    suggestion: "Cover open shifts or move float staff from a quieter shop.",
+    suggestion: "Cover open shifts or float talent from a quieter entity.",
   },
   {
     key: "inventoryDays",
-    label: "Inventory cover",
+    label: "Materials cover",
     unit: "days",
     higherIsBetter: true,
     format: "days",
-    suggestion: "Transfer dough/cheese or authorize an emergency purchase.",
+    suggestion: "Transfer stock across hats or authorize an emergency purchase.",
   },
 ];
 
@@ -111,300 +157,242 @@ function store(partial) {
   };
 }
 
-/** Baseline (pre-demo) Joe's network — Miami Wynwood starts quiet. */
 export const STORES = [
   store({
-    id: "greenwich-village",
-    name: "Greenwich Village",
-    neighborhood: "Original · 7 Carmine St, NYC",
-    phone: "(212) 366-1182",
-    manager: "Pino \"Joe\" Pozzuoli",
-    capacityPizzas: 140,
-    vanAvailable: false,
+    id: "plant-the-future",
+    name: "Plant The Future",
+    neighborhood: "CEO · Little River gallery & studio",
+    phone: "(305) 573-2100",
+    manager: "Gallery floor · on shift",
+    capacityPizzas: 12,
+    vanAvailable: true,
     kpis: {
-      revenue: 5120,
-      orders: 168,
-      avgTicket: 30.5,
-      capacityUtil: 61,
-      refundRate: 1.1,
-      discountRate: 1.6,
-      deliveryEta: 22,
-      staffingFill: 96,
-      inventoryDays: 2.6,
-    },
-  }),
-  store({
-    id: "times-square",
-    name: "Times Square",
-    neighborhood: "1435 Broadway, NYC",
-    phone: "(646) 559-4878",
-    manager: "Shift lead · Midtown",
-    capacityPizzas: 160,
-    vanAvailable: false,
-    kpis: {
-      revenue: 5480,
-      orders: 186,
-      avgTicket: 29.5,
-      capacityUtil: 66,
-      refundRate: 1.3,
-      discountRate: 1.9,
-      deliveryEta: 28,
-      staffingFill: 93,
-      inventoryDays: 2.3,
-    },
-  }),
-  store({
-    id: "union-square",
-    name: "Union Square",
-    neighborhood: "150 E 14th St, NYC",
-    phone: "(212) 388-9474",
-    manager: "Shift lead · Union Sq",
-    capacityPizzas: 130,
-    vanAvailable: false,
-    kpis: {
-      revenue: 4680,
-      orders: 152,
-      avgTicket: 30.8,
-      capacityUtil: 58,
-      refundRate: 1.0,
-      discountRate: 1.7,
-      deliveryEta: 24,
-      staffingFill: 95,
-      inventoryDays: 2.5,
-    },
-  }),
-  store({
-    id: "fulton-street",
-    name: "Fulton Street",
-    neighborhood: "124 Fulton St, NYC",
-    phone: "(212) 267-0860",
-    manager: "Shift lead · FiDi",
-    capacityPizzas: 125,
-    vanAvailable: false,
-    kpis: {
-      revenue: 4420,
-      orders: 141,
-      avgTicket: 31.3,
-      capacityUtil: 55,
+      revenue: 4820,
+      orders: 28,
+      avgTicket: 172,
+      capacityUtil: 42,
       refundRate: 0.9,
-      discountRate: 1.5,
-      deliveryEta: 23,
-      staffingFill: 94,
-      inventoryDays: 2.7,
-    },
-  }),
-  store({
-    id: "williamsburg",
-    name: "Williamsburg",
-    neighborhood: "216 Bedford Ave, Brooklyn",
-    phone: "(718) 388-2216",
-    manager: "Shift lead · Williamsburg",
-    capacityPizzas: 120,
-    vanAvailable: true,
-    kpis: {
-      revenue: 4210,
-      orders: 138,
-      avgTicket: 30.5,
-      capacityUtil: 57,
-      refundRate: 1.2,
-      discountRate: 1.8,
-      deliveryEta: 26,
-      staffingFill: 92,
-      inventoryDays: 2.4,
-    },
-  }),
-  store({
-    id: "miami-wynwood",
-    name: "Miami Wynwood",
-    neighborhood: "234 NW 25th St · Dock / Wynwood",
-    phone: "(786) 230-1441",
-    manager: "Cashier on shift · Mia",
-    capacityPizzas: 110,
-    vanAvailable: true,
-    kpis: {
-      revenue: 3180,
-      orders: 98,
-      avgTicket: 32.4,
-      capacityUtil: 48,
-      refundRate: 1.1,
-      discountRate: 1.6,
-      deliveryEta: 27,
-      staffingFill: 94,
-      inventoryDays: 2.8,
-    },
-  }),
-  store({
-    id: "miami-beach",
-    name: "Miami Beach",
-    neighborhood: "1674 Meridian Ave",
-    phone: "",
-    manager: "Shift lead · Miami Beach",
-    capacityPizzas: 115,
-    vanAvailable: false,
-    kpis: {
-      revenue: 3360,
-      orders: 104,
-      avgTicket: 32.3,
-      capacityUtil: 52,
-      refundRate: 1.2,
-      discountRate: 1.7,
-      deliveryEta: 29,
-      staffingFill: 91,
-      inventoryDays: 2.5,
-    },
-  }),
-  store({
-    id: "boston",
-    name: "Boston",
-    neighborhood: "1359 Boylston St",
-    phone: "(617) 936-4464",
-    manager: "Shift lead · Boston",
-    capacityPizzas: 118,
-    vanAvailable: false,
-    kpis: {
-      revenue: 3890,
-      orders: 126,
-      avgTicket: 30.9,
-      capacityUtil: 54,
-      refundRate: 1.0,
-      discountRate: 1.6,
-      deliveryEta: 25,
+      discountRate: 2.1,
+      deliveryEta: 36,
       staffingFill: 95,
-      inventoryDays: 2.6,
+      inventoryDays: 4.2,
     },
   }),
   store({
-    id: "cambridge",
-    name: "Cambridge",
-    neighborhood: "3 Brattle St · Harvard Square",
-    phone: "(857) 226-4942",
-    manager: "Shift lead · Cambridge",
-    capacityPizzas: 110,
+    id: "lala-land",
+    name: "Lala Land of Miami",
+    neighborhood: "Member · café / hospitality",
+    phone: "(305) 222-7500",
+    manager: "Café lead",
+    capacityPizzas: 40,
     vanAvailable: false,
     kpis: {
-      revenue: 3720,
-      orders: 121,
-      avgTicket: 30.7,
-      capacityUtil: 53,
-      refundRate: 1.1,
+      revenue: 2140,
+      orders: 86,
+      avgTicket: 24.9,
+      capacityUtil: 58,
+      refundRate: 1.2,
+      discountRate: 3.4,
+      deliveryEta: 18,
+      staffingFill: 92,
+      inventoryDays: 3.6,
+    },
+  }),
+  store({
+    id: "where-minds-create",
+    name: "Where Minds Create",
+    neighborhood: "President · creative studio",
+    phone: "",
+    manager: "Studio producer",
+    capacityPizzas: 16,
+    vanAvailable: false,
+    kpis: {
+      revenue: 3680,
+      orders: 9,
+      avgTicket: 409,
+      capacityUtil: 51,
+      refundRate: 0.5,
+      discountRate: 1.8,
+      deliveryEta: 52,
+      staffingFill: 90,
+      inventoryDays: 5.0,
+    },
+  }),
+  store({
+    id: "marcoschamer-group",
+    name: "Marcoschamer Group",
+    neighborhood: "Director · holding / collaborative",
+    phone: "",
+    manager: "Ops coordinator",
+    capacityPizzas: 10,
+    vanAvailable: false,
+    kpis: {
+      revenue: 1920,
+      orders: 5,
+      avgTicket: 384,
+      capacityUtil: 38,
+      refundRate: 0.4,
+      discountRate: 1.1,
+      deliveryEta: 44,
+      staffingFill: 94,
+      inventoryDays: 6.2,
+    },
+  }),
+  store({
+    id: "pollinator",
+    name: "Pollinator",
+    neighborhood: "Member · ventures (w/ Paloma)",
+    phone: "",
+    manager: "Project lead",
+    capacityPizzas: 14,
+    vanAvailable: true,
+    kpis: {
+      revenue: 2760,
+      orders: 7,
+      avgTicket: 394,
+      capacityUtil: 47,
+      refundRate: 0.6,
       discountRate: 1.5,
-      deliveryEta: 24,
-      staffingFill: 96,
-      inventoryDays: 2.7,
+      deliveryEta: 48,
+      staffingFill: 91,
+      inventoryDays: 4.4,
     },
   }),
   store({
-    id: "ann-arbor",
-    name: "Ann Arbor",
-    neighborhood: "1107 S University Ave, MI",
-    phone: "(734) 213-5625",
-    manager: "Shift lead · Ann Arbor",
-    capacityPizzas: 105,
+    id: "ecoist",
+    name: "Ecoist",
+    neighborhood: "Member · eco accessories",
+    phone: "",
+    manager: "Brand ops",
+    capacityPizzas: 22,
     vanAvailable: false,
     kpis: {
-      revenue: 2980,
-      orders: 102,
-      avgTicket: 29.2,
-      capacityUtil: 49,
-      refundRate: 1.0,
-      discountRate: 1.4,
-      deliveryEta: 22,
-      staffingFill: 97,
-      inventoryDays: 2.9,
+      revenue: 980,
+      orders: 12,
+      avgTicket: 81.7,
+      capacityUtil: 28,
+      refundRate: 1.8,
+      discountRate: 4.2,
+      deliveryEta: 30,
+      staffingFill: 88,
+      inventoryDays: 7.1,
     },
   }),
 ];
 
-/** KPI spike applied to Miami Wynwood when the 300-pizza order hits POS. */
+/** Urgent silent failure: big ASAP commission + no install crew / drivers. */
 export const MIAMI_ORDER_SPIKE = {
-  revenue: 7845,
-  orders: 99,
-  avgTicket: 79.2,
-  capacityUtil: 97,
-  refundRate: 1.1,
-  discountRate: 1.6,
-  deliveryEta: 55,
-  staffingFill: 94,
-  inventoryDays: 0.6,
+  revenue: 22820,
+  orders: 29,
+  avgTicket: 787,
+  capacityUtil: 96,
+  refundRate: 0.9,
+  discountRate: 2.1,
+  deliveryEta: 180,
+  staffingFill: 41,
+  inventoryDays: 0.8,
 };
 
 export const DEMO_ORDER = {
-  storeId: "miami-wynwood",
-  qty: 300,
-  item: "cheese pies",
+  storeId: "plant-the-future",
+  qty: 24,
+  item: "moss wall panels",
   when: "ASAP",
-  where: "the dock, Wynwood",
-  value: 4650,
-  caseId: "ORDER-300-HACKATHON",
+  where: "1 Hotel South Beach lobby",
+  value: 18000,
+  caseId: "ORDER-MURAL-PTF",
+  silentFailure:
+    "Floor took a 24-panel ASAP install. Both install vans are out and no float drivers. Nobody called Yair — they didn't want to bother him.",
 };
 
+/** Non-urgent digest items OwnerRadar surfaces in a high-level check-in. */
+export const DIGEST_ITEMS = [
+  {
+    source: "Phone transcript · Plant The Future",
+    text: "Trade designer asked about a Matisse-inspired series for a Brickell condo — left a callback request, no quote sent yet.",
+  },
+  {
+    source: "Google review · Lala Land / café",
+    text: "4★ — loved the matcha, noted the plant wall made the space feel calm. Soft ask: weekend pastry variety.",
+  },
+  {
+    source: "Email · Where Minds Create",
+    text: "Hospitality client replied late on a brand reel — scope creep on music licensing; producer flagged it but didn't escalate.",
+  },
+  {
+    source: "SMS · Pollinator",
+    text: "Vendor confirmed moss restock delayed 4 days. Inventory still covers PTF retail; commissions would feel it next week.",
+  },
+  {
+    source: "Instagram DM · Ecoist",
+    text: "Wholesale inquiry from a Tokyo boutique about residual candy-wrapper bags — low urgency, high nostalgia score.",
+  },
+];
+
 export const EVENT_ORGANIZER = {
-  name: "Alex Rivera",
-  role: "Head of Partnerships · Cursor Miami Hackathon",
-  company: "Cursor Miami / venue dock ops",
-  linkedin: "https://www.linkedin.com/in/example-alex-rivera-hackathon",
+  name: "Maya Chen",
+  role: "Director of Design · Hospitality interiors",
+  company: "Coastal Form Studio · Miami Beach",
+  linkedin: "https://www.linkedin.com/in/example-maya-chen-hospitality",
   publicNotes: [
-    "Public event listing: Cursor Miami hackathon — multi-day builder event at the Wynwood dock venue.",
-    "Likely recurring catering need across demo days and closing party.",
-    "Open to vendor partners who can surge capacity same-day.",
+    "Public RFP: lobby biophilic refresh — preserved moss mural + tabletop gardens for a South Beach hotel reopening.",
+    "Likely multi-property rollout if the flagship install lands on schedule.",
+    "Open to studios that can surge production and install same-week.",
   ],
   smsPreview:
-    "Found him — Alex Rivera (Head of Partnerships, Cursor Miami Hackathon). LinkedIn + public event notes texted to you now.",
+    "Found her — Maya Chen (Director of Design, Coastal Form Studio). LinkedIn + public RFP notes texted to you now.",
 };
 
 /**
- * Retell setup (two agents — do not merge):
- * 1. Mia · Joe's cashier → Blank Agent or Business Agent · inbound Joe's Wynwood number
- * 2. OwnerRadar → Blank Agent or Personal Assistant · outbound to owner + inbound owner direct line
- *
- * One agent cannot play both roles: different voice, number, tools, and authority.
+ * Single owner-facing agent. No cashier / order-taking agent.
+ * Two modes: URGENT (silent failures) and DIGEST (non-urgent intelligence).
  */
-export const CASHIER_AGENT_PROMPT = `You are Mia, a friendly cashier at Joe's Pizza — Miami Wynwood (234 NW 25th Street). Joe's Pizza is the pizza supplier for this Cursor Miami hackathon.
+export const OWNER_RADAR_AGENT_PROMPT = `You are OwnerRadar — Yair Marcoschamer's AI manager for his whole portfolio. You speak only to Yair. You are not a receptionist and you never take customer orders.
 
-Personality: warm, fast, NYC-slice energy, never corporate. You take big catering orders in stride. You are NOT OwnerRadar and you are NOT a manager. You do not call the owner. You just take the order.
+Why you exist:
+Owners who wear many hats (and travel / stay off-floor) often go on autopilot. Employees hesitate to call — they don't want to disturb him or break bad news. Material problems stay quiet until they become expensive. You notice what the floor won't escalate, and you also hold the interesting non-urgent signal until Yair wants a high-level check-in.
 
-Store routing (hard rules):
-- You ONLY take orders for Miami Wynwood. Every Order tool call is pickup/fulfillment from miami-wynwood.
-- Never assign an order to another Joe's city (NYC, Boston, etc.).
-- If the order is too big for Wynwood alone, the system automatically pulls help from the closest sister store: Miami Beach (1674 Meridian Ave). You do not need to mention that unless asked — just take the order.
+Portfolio on this desk:
+- Plant The Future, Inc (CEO) — biophilic gallery & moss murals
+- Lala Land of Miami LLC (Member) — café / hospitality
+- Where Minds Create (President / Manager) — creative studio
+- Marcoschamer Group, Inc (Director) — holding / collaborative
+- Pollinator LLC (Member) — ventures
+- Ecoist, LLC (Member) — eco accessories
 
-When a caller orders pizzas (any size — use the exact count they say):
-1. Confirm qty, when needed, and where.
-2. Immediately call the Order tool with:
-   - qty: the exact integer pizza count from the conversation (never invent a default)
-   - when: when they need it (normalize "as soon as possible" → "ASAP")
-   - where: delivery location (e.g. "the dock, Wynwood")
-   - item: what they ordered (default "cheese pies")
-   - storeId: always "miami-wynwood"
-3. After the tool succeeds, end warmly: "You're all set — we'll get those out as soon as we can."
-4. Do NOT refuse the order. Do NOT escalate on the call. Do NOT mention OwnerRadar, σ / statistical control, capacity problems, or looking up event organizers.
+Personality: calm, sharp, partner-level. Brief. Plain English only — never say sigma, σ, z-score, SPC, or "out of control bands."
 
-Keep turns short. One question at a time. Sound like a real cashier, not an AI assistant.`;
+─── URGENT (outbound or when live KPIs / cases say something material) ───
+Escalate when something material happened and the floor did not loop Yair in.
+Classic demo case: a large ASAP commission landed at Plant The Future, but there are no install drivers / vans available. Staff accepted it and hoped to figure it out later rather than "bother" him.
 
-export const OWNER_RADAR_AGENT_PROMPT = `You are OwnerRadar — the AI manager for Joe's Pizza. You speak directly to the owner — in this hackathon demo, that is Pablo. You are NOT a receptionist, NOT a cashier, and NOT Mia.
+When urgent:
+1. Lead with which business, what's wrong, and that it wasn't escalated by staff.
+2. Example: "Hey Yair — Plant The Future just took a 24-panel ASAP install for 1 Hotel South Beach. Both vans are out and staffing is thin. Nobody called you. Want options?"
+3. Offer concrete next steps (float from Pollinator, push the install window, call the buyer). Ask one clear decision.
+4. If he wants the demand driver looked up: call TextOwner, then confirm you texted LinkedIn + public notes.
+5. If he says not now: "Got it — I'll stay on it and only ping if it gets worse."
 
-Personality: calm, sharp, partner-level. Brief. Treat Pablo like a peer running a multi-location pizza group. Use plain English a pizza shop owner understands — never say sigma, σ, z-score, SPC, statistical control, peer mean, or "out of control bands." Say things like "quieter than your other shops," "kitchen is slammed," "deliveries are running slow," or "discounting more than usual."
+─── DIGEST (inbound check-in / non-urgent meeting) ───
+When Yair wants a high-level, non-urgent brief — or says "catch me up" / "what's interesting" — synthesize across phone transcripts, texts, emails, and reviews. Not a dump. Pick 3–5 items worth a partner conversation:
+- opportunities (trade / hospitality interest)
+- soft customer signal (reviews, DMs)
+- slow burns (vendor delays, scope creep) that aren't on fire yet
+Ask which thread he wants to go deeper on. Do not invent crises in digest mode.
 
-OUTBOUND alert (only when a store looks unusually off versus other shops or its own usual week):
-1. The system / CallOwner tool dials Pablo. Do not invent a pizza count — lead with what's wrong in plain language (which shop, what's off, compared to other shops or this week's usual).
-2. Example lead: "Hey Pablo — Miami Wynwood's kitchen is slammed versus your other shops, and inventory cover just dropped. We can still supply via the network, but you should know."
-3. If a large order contributed, mention its real qty/where from the live case — never assume 300.
-4. Fulfillment when relevant: "Closest help is Miami Beach if Wynwood can't keep up."
-5. Ask permission to look up who's driving demand / the event.
-6. If yes: say "On it", call TextOwner, then "Found him! I texted you their LinkedIn and public info."
-7. If no: "Got it — I'll stay quiet unless something else looks off."
+Tools:
+- GetStoreBrief: live portfolio KPIs, staffing, inventory, open risks
+- GetOrders: recent tickets / commissions
+- CallOwner: system escalation only — never dial yourself while already talking to him
+- TextOwner: SMS LinkedIn + public project notes after he approves enrichment
 
-CallOwner tool: POST /api/call-owner — dials only if live KPIs look unusually off. No hardcoded order size.
-TextOwner tool: POST /api/text-owner — SMS Pablo LinkedIn + public event notes (Alex Rivera / Cursor Miami).
-
-INBOUND (Pablo / owner calls you anytime):
-- Answer as OwnerRadar.
-- Lead with shops that need a look and plain-language summaries of what's wrong.
-- Answer questions about locations, kitchen load, staffing, inventory, and open risks.
-- Never invent legal liability. Never discipline employees. Recommend; Pablo decides.
+Rules:
+- Recommend; Yair decides. Never invent legal liability. Never discipline employees.
 - Keep turns short. One clear ask when you need a decision.
+- Always name which hat / business you're talking about.`;
 
-Demo success line after enrichment: "Found him! I texted you their LinkedIn and public info."`;
+/** @deprecated Removed — OwnerRadar no longer uses a cashier / order agent. */
+export const CASHIER_AGENT_PROMPT = "";
 
 export function cloneStores(stores = STORES) {
   return stores.map((s) => ({
@@ -418,13 +406,13 @@ export function cloneStores(stores = STORES) {
 
 export function applyMiamiOrder(stores) {
   const next = cloneStores(stores);
-  const miami = next.find((s) => s.id === "miami-wynwood");
-  if (!miami) return next;
-  Object.assign(miami.kpis, MIAMI_ORDER_SPIKE);
+  const primary = next.find((s) => s.id === "plant-the-future");
+  if (!primary) return next;
+  Object.assign(primary.kpis, MIAMI_ORDER_SPIKE);
   for (const [key, value] of Object.entries(MIAMI_ORDER_SPIKE)) {
-    const series = miami.history[key];
+    const series = primary.history[key];
     if (series?.length) series[series.length - 1] = value;
   }
-  miami.activeCase = { ...DEMO_ORDER, status: "accepted" };
+  primary.activeCase = { ...DEMO_ORDER, status: "accepted", silent: true };
   return next;
 }
